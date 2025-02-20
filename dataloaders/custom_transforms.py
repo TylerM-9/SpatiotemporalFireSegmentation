@@ -41,11 +41,18 @@ class ScaleNRotate(object):
             center = (w / 2, h / 2)
             assert(center != 0)  # Strange behaviour warpAffine
             M = cv2.getRotationMatrix2D(center, rot, sc)
-
+            """
             if ((tmp == 0) | (tmp == 1)).all():
                 flagval = cv2.INTER_NEAREST
             else:
                 flagval = cv2.INTER_CUBIC
+            """
+            # Check if the image has more than 4 channels
+            if tmp.ndim == 3 and tmp.shape[2] > 4:
+                flagval = cv2.INTER_LINEAR
+            else:
+                # If it's binary, use nearest; otherwise use cubic.
+                flagval = cv2.INTER_NEAREST if ((tmp == 0) | (tmp == 1)).all() else cv2.INTER_CUBIC
             tmp = cv2.warpAffine(tmp, M, (w, h), flags=flagval)
 
             sample[elem] = tmp

@@ -2,7 +2,7 @@
 class Path(object):
     @staticmethod
     def db_root_dir():
-        return '/home/xk/Dataset/DAVIS'
+        return '/Users/bezbodima/Downloads/DAV'
 
     @staticmethod
     def save_root_dir():
@@ -26,8 +26,8 @@ class Path(object):
 
     @staticmethod
     def MSRAdataset_dir():
-        return "/home/xk/Dataset/MSRA10K_Imgs_GT/MSRA10K_Imgs_GT/Imgs/"
+        return "/Users/bezbodima/Downloads/MSRA10K_Imgs_GT/MSRA10K_Imgs_GT/Imgs/"
 
     @staticmethod
     def VOC_dir():
-        return "/home/xk/Dataset/VOC/"
+        return "/Users/bezbodima/Downloads/VOC/"

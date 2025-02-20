@@ -33,7 +33,7 @@ def main(args):
 
 	# # Setting other parameters
 	resume_epoch = 0  # Default is 0, change if want to resume
-	nEpochs = 10  # Number of epochs for training (500.000/2079)
+	nEpochs = 100  # Number of epochs for training (500.000/2079)
 	batch_size = 1
 	snapshot = 1  # Store a model every snapshot epochs
 	pred_lr = 1e-8
@@ -59,13 +59,15 @@ def main(args):
 	# Network definition
 
 	netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
+	# Do not have a pre-trained discriminator
 	initialize_netD(netD,os.path.join(save_dir, 'FramePredModels','frame_nums_'+str(num_frame),'NetD_epoch-90.pth'))
 	seg_enc = SegEncoder()
 	pred_enc = FramePredEncoder(frame_nums=num_frame)
 	pred_dec = FramePredDecoder()
 	j_seg_dec = JointSegDecoder()
 	if resume_epoch == 0:
-		initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir,num_frame=num_frame)
+		# Do not have pre-trained
+		#initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir,num_frame=num_frame)
 		net = STCNN(pred_enc, seg_enc, pred_dec, j_seg_dec)
 	else:
 		net = STCNN(pred_enc, seg_enc, pred_dec, j_seg_dec)
@@ -102,12 +104,11 @@ def main(args):
 	# Preparation of the data loaders
 	# Define augmentation transformations as a composition
 	composed_transforms = transforms.Compose([tr.RandomHorizontalFlip(),
-											  tr.ScaleNRotate(rots=(-30, 30), scales=(0.75, 1.25))
+											  tr.ScaleNRotate(rots=(-30, 30), scales=(0.75, 1.25)),
 											  ])
 
 	# Training dataset and its iterator
-	db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join(Path.data_dir(),'DAVIS16_samples_list_'+str(num_frame)+'.txt'),
-							   transform=composed_transforms,num_frame=num_frame)
+	db_train = db.FIREDataset(inputRes=(400,710),transform=composed_transforms,num_frame=num_frame)
 	trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
 	num_img_tr = len(trainloader)
 	iter_num = nEpochs * num_img_tr
@@ -134,9 +135,9 @@ def main(args):
 			pred_gts = pred_gts.detach()
 			seg_res, pred = net.forward(seqs, frames)
 
-			D_real = netD(pred_gts)
+			D_real = netD(pred_gts).squeeze(1)
 			errD_real = criterion(D_real, real_label)
-			D_fake = netD(pred.detach())
+			D_fake = netD(pred.detach()).squeeze(1)
 			errD_fake = criterion(D_fake, fake_label)
 
 			optimizer.zero_grad()
@@ -163,7 +164,7 @@ def main(args):
 				# (2) Update G network: maximize log(D(G(z)))
 				###########################
 				optimizerG.zero_grad()
-				D_fake = netD(pred)
+				D_fake = netD(pred).squeeze(1)
 				errG = criterion(D_fake, real_label)
 
 				lp_loss = lp_function(pred, pred_gts)
@@ -191,7 +192,7 @@ def main(args):
 				writer.add_scalar('data/G_loss_iter', errG.item(), ii + num_img_tr * epoch)
 				writer.add_scalar('data/seg_loss_iter', seg_loss.item(), ii + num_img_tr * epoch)
 
-			if (ii + num_img_tr * epoch) % 500 == 0:
+			if (ii + num_img_tr * epoch) % 20 == 0:
 
 				seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
 				seg_pred = 1 / (1 + np.exp(-seg_pred))
@@ -221,8 +222,9 @@ def main(args):
 		stop_time = timeit.default_timer()
 		print("Execution time: " + str(stop_time - start_time))
 		# Save the model
-		if (epoch % snapshot) == snapshot - 1 and epoch != 0:
-			torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch-' + str(epoch) + '.pth'))
+		
+		#if (epoch % snapshot) == snapshot - 1 and epoch != 0:
+			#torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch-' + str(epoch) + '.pth'))
 
 	writer.close()
 
@@ -231,14 +233,24 @@ def inverse_transform(images):
 
 
 def initialize_netD(netD,model_path):
-	pretrained_netG_dict = torch.load(model_path)
-
-	model_dict = netD.state_dict()
-	# 1. filter out unnecessary keys
-	pretrained_dict = {k: v for k, v in pretrained_netG_dict.items() if k in model_dict}
-	# 2. overwrite entries in the existing state dict
-	model_dict.update(pretrained_dict)
-	netD.load_state_dict(model_dict)
+	# Load the Inception-v3 model from torch hub with pretrained weights
+    hub_model = torch.hub.load('pytorch/vision:v0.10.0', 'inception_v3', pretrained=True)
+    hub_model.eval()
+    
+    # Get the state dictionary from the hub model
+    pretrained_dict = hub_model.state_dict()
+    
+    # Get the state dictionary of your netD
+    model_dict = netD.state_dict()
+    
+    # Filter out unnecessary keys
+     # Filter out fc layers to avoid size mismatch
+    filtered_dict = {k: v for k, v in pretrained_dict.items() 
+                     if k in model_dict and not k.startswith('fc.')}
+    
+    # Update your netD's state dictionary with the pretrained weights
+    model_dict.update(filtered_dict)
+    netD.load_state_dict(model_dict)
 
 def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4):
 	print("Loading weights from pretrained NetG")
@@ -254,7 +266,7 @@ def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4
 	model_dict = pred_dec.state_dict()
 	# 1. filter out unnecessary keys
 	pretrained_dict = {k: v for k, v in pretrained_netG_dict.items() if k in model_dict}
-	# 2. overwrite entries in the existing state dict
+	# 2. overwrite entries in the existing state dicthttps://file+.vscode-resource.vscode-cdn.net/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/output/STCNN_frame_4_results/train_600_p.png?version%3D1739845955198
 	model_dict.update(pretrained_dict)
 	pred_dec.load_state_dict(model_dict)
 
@@ -282,7 +294,7 @@ def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4
 if __name__ == "__main__":
 	main_arg_parser = argparse.ArgumentParser(description="parser for train frame predict")
 
-	main_arg_parser.add_argument("--frame_nums", type=int, default=4,
+	main_arg_parser.add_argument("--frame_nums", type=int, default=3,
 								 help="input frame nums")
 
 	args = main_arg_parser.parse_args()
