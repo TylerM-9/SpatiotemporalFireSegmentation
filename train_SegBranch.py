@@ -11,6 +11,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 from torchvision import transforms
+import torchvision.models as models
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import imageio
@@ -127,6 +128,8 @@ def main():
 
 				samples = np.concatenate((samples, gt, inputs), axis=0)
 
+				samples = np.clip(samples, 0, 255).astype(np.uint8)
+
 				print("Saving sample ...")
 				# samples = inverse_transform(samples)*255
 				running_res_dir = os.path.join(save_dir, modelName+'_results')
@@ -139,7 +142,7 @@ def main():
 				torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch-' + str(curr_iter) + '.pth'))
 			if curr_iter == iter_num:
 				return
-
+'''
 def initialize_SegEncoder(net):
 	print("Loading weights from PyTorch ResNet101")
 	pretrained_dict = torch.load(os.path.join('./models', 'resnet101_pytorch.pth'))
@@ -151,6 +154,22 @@ def initialize_SegEncoder(net):
 	model_dict.update(pretrained_dict)
 	# 3. load the new state dict
 	net.load_state_dict(model_dict)
+'''
+
+def initialize_SegEncoder(net):
+    print("Loading weights from PyTorch ResNet101 (online)")
+    # Load pretrained ResNet101 from torchvision
+    resnet = models.resnet101(pretrained=True)  # For torchvision >= 0.13, use weights=ResNet101_Weights.IMAGENET1K_V1
+    pretrained_dict = resnet.state_dict()
+    model_dict = net.state_dict()
+    
+    
+    # 2. Overwrite matching entries
+    model_dict.update(pretrained_dict)
+    
+    # 3. Load with strict=False to handle remaining mismatches
+    net.load_state_dict(model_dict, strict=False)
+	
 
 if __name__ == "__main__":
 	main()

@@ -47,27 +47,25 @@ def make_voc_dataset(mode,root):
 	assert mode in ['train', 'val', 'test']
 	items = []
 	if mode == 'train':
-		img_path = os.path.join(root, 'benchmark_RELEASE', 'dataset', 'img')
-		mask_path = os.path.join(root, 'benchmark_RELEASE', 'dataset', 'inst')
+		img_path = os.path.join(root, 'VOCdevkit', 'VOC2012', 'JPEGImages')
+		mask_path = os.path.join(root, 'VOCdevkit', 'VOC2012', 'SegmentationClass')
 		data_list = [l.strip('\n') for l in open(os.path.join(
-			root, 'benchmark_RELEASE', 'dataset', 'train.txt')).readlines()]
-		data_list.extend([l.strip('\n') for l in open(os.path.join(
-			root, 'benchmark_RELEASE', 'dataset', 'val.txt')).readlines()])
+			root, 'VOCdevkit', 'VOC2012', 'ImageSets', 'Segmentation', 'train.txt')).readlines()]
 		for it in data_list:
-			item = (os.path.join(img_path, it + '.jpg'), os.path.join(mask_path, it + '.mat'))
+			item = (os.path.join(img_path, it + '.jpg'), os.path.join(mask_path, it + '.png'))
 			items.append(item)
 	elif mode == 'val':
 		img_path = os.path.join(root, 'VOCdevkit', 'VOC2012', 'JPEGImages')
 		mask_path = os.path.join(root, 'VOCdevkit', 'VOC2012', 'SegmentationClass')
 		data_list = [l.strip('\n') for l in open(os.path.join(
-			root, 'VOCdevkit', 'VOC2012', 'ImageSets', 'Segmentation', 'seg11valid.txt')).readlines()]
+			root, 'VOCdevkit', 'VOC2012', 'ImageSets', 'Segmentation', 'val.txt')).readlines()]
 		for it in data_list:
 			item = (os.path.join(img_path, it + '.jpg'), os.path.join(mask_path, it + '.png'))
 			items.append(item)
 	else:
-		img_path = os.path.join(root, 'VOCdevkit (test)', 'VOC2012', 'JPEGImages')
+		img_path = os.path.join(root, 'VOCdevkit 2', 'VOC2012', 'JPEGImages')
 		data_list = [l.strip('\n') for l in open(os.path.join(
-			root, 'VOCdevkit (test)', 'VOC2012', 'ImageSets', 'Segmentation', 'test.txt')).readlines()]
+			root, 'VOCdevkit 2', 'VOC2012', 'ImageSets', 'Segmentation', 'test.txt')).readlines()]
 		for it in data_list:
 			items.append((img_path, it))
 	return items
@@ -130,6 +128,10 @@ class voc_msra_dataloadr(data.Dataset):
 		self.msra_num = len(self.imgs_msra)
 
 	def __getitem__(self, index):
+		img_path, gt_path = self.imgs[index]
+		img = Image.open(img_path).convert('RGB')
+		target = Image.open(gt_path).convert('L')
+		"""
 		if index < self.msra_num:
 			img_path, gt_path = self.imgs[index]
 			img = Image.open(img_path).convert('RGB')
@@ -137,11 +139,15 @@ class voc_msra_dataloadr(data.Dataset):
 		else:
 			img_path, mask_path = self.imgs[index]
 			img = Image.open(img_path).convert('RGB')
-			target = sio.loadmat(mask_path)['GTinst']['Segmentation'][0][0]
-			target = np.asarray(target, dtype=np.float32)
-
-			target[target > 0] = 255.0
-			target = Image.fromarray(target).convert('L')
+            
+            # Load VOC mask as PNG instead of .mat
+			print(mask_path)
+			target = Image.open(mask_path).convert('L')
+            
+            # Convert to numpy array if needed
+			target = np.array(target, dtype=np.float32)
+			target[target > 0] = 255.0  # Binarize mask
+		"""
 
 		if self.joint_transform is not None:
 			img, target = self.joint_transform(img, target)

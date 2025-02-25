@@ -30,4 +30,4 @@ class Path(object):
 
     @staticmethod
     def VOC_dir():
-        return "/Users/bezbodima/Downloads/VOC/"
+        return "/Users/bezbodima/Downloads/"
