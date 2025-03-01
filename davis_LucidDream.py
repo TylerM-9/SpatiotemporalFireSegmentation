@@ -8,20 +8,21 @@ from mypath import Path
 
 db_root_dir = Path.db_root_dir()
 save_dir = os.path.join(db_root_dir,'first_frame')
-with open(os.path.join(db_root_dir, 'ImageSets/2016/', 'val.txt')) as f:
+with open(os.path.join(db_root_dir, 'ImageSets/480p/', 'val.txt')) as f:
 	seqnames = f.readlines()
 
 for i in range(len(seqnames)):
 	seq_name = seqnames[i].strip()
 	save_path = os.path.join(save_dir,seq_name)
 	dream_dir = os.path.join(save_path,'dream')
+	print(dream_dir)
 	if not os.path.exists(dream_dir):
 		os.makedirs(os.path.join(dream_dir))
 
-	names_img = np.sort(os.listdir(os.path.join(db_root_dir, 'JPEGImages/480p/', str(seq_name))))
-	img_list = list(map(lambda x: os.path.join(db_root_dir, 'JPEGImages/480p/', str(seq_name), x), names_img))
-	name_label = np.sort(os.listdir(os.path.join(db_root_dir, 'Annotations/480p/', str(seq_name))))
-	labels = list(map(lambda x: os.path.join(db_root_dir, 'Annotations/480p/', str(seq_name), x), name_label))
+	names_img = np.sort(os.listdir(os.path.join(db_root_dir, str(seq_name))))
+	img_list = list(map(lambda x: os.path.join(db_root_dir, str(seq_name), x), names_img))
+	name_label = np.sort(os.listdir(os.path.join(db_root_dir, str(seq_name))))
+	labels = list(map(lambda x: os.path.join(db_root_dir, str(seq_name), x), name_label))
 	img_path = img_list[0]
 	label_path = labels[0]
 	Iorg = cv2.imread(img_path)
