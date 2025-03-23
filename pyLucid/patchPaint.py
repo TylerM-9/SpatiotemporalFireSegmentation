@@ -1,7 +1,7 @@
 import numpy as np 
 import cv2
 import matplotlib.pyplot as plt
-from PatchMatch.PatchMatchCuda import PatchMatch
+from .PatchMatch.PatchMatchOrig import PatchMatch
 
 def paint(Iorg, Mask, verbose=True, sigma=0.1):
     Iorg=cv2.cvtColor(Iorg,cv2.COLOR_BGR2Lab)
@@ -13,7 +13,7 @@ def paint(Iorg, Mask, verbose=True, sigma=0.1):
 
     if width%2==0:
         raise Exception('The width should be an odd integer.')
-    padwidth=width/2
+    padwidth=width//2
 
     if Mask.ndim!=2:
         if Mask.ndim==3 and Mask.shape[2]==1:
@@ -83,8 +83,8 @@ def paint(Iorg, Mask, verbose=True, sigma=0.1):
             sim=np.exp(-d/(2*sigma**2),dtype='float64')
 
             R=sim[:,np.newaxis,np.newaxis,np.newaxis]*patchim
-            sumpatch=[np.bincount(groupind.ravel(),weights=R[...,i].ravel()) for i in xrange(chn)]
-            Rlst=[np.zeros([m+width-1,n+width-1],dtype='float64') for _ in xrange(chn)]
+            sumpatch=[np.bincount(groupind.ravel(),weights=R[...,i].ravel()) for i in range(chn)]
+            Rlst=[np.zeros([m+width-1,n+width-1],dtype='float64') for _ in range(chn)]
             for i in range(chn):
                 Rlst[i].ravel()[:sumpatch[i].size]=sumpatch[i]
             R=np.dstack(Rlst)

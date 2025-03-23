@@ -2,11 +2,11 @@
 class Path(object):
     @staticmethod
     def db_root_dir():
-        return '/Users/bezbodima/Downloads/DAV'
+        return '/home/r56x196/Data/DAVIS'
 
     @staticmethod
     def save_root_dir():
-        return './output'
+        return '/home/r56x196/STCNN/output'
 
     @staticmethod
     def models_dir():
@@ -18,7 +18,7 @@ class Path(object):
 
     @staticmethod
     def VID_list_file():
-        return "./data/VID_seqs_list.txt"
+        return "/home/r56x196/STCNN/data/VID_seqs_list.txt"
 
     @staticmethod
     def DAVIS_list_file():
@@ -26,8 +26,8 @@ class Path(object):
 
     @staticmethod
     def MSRAdataset_dir():
-        return "/Users/bezbodima/Downloads/MSRA10K_Imgs_GT/MSRA10K_Imgs_GT/Imgs/"
+        return "/home/r56x196/Data/MSRA10K_Imgs_GT/MSRA10K_Imgs_GT/Imgs/"
 
     @staticmethod
     def VOC_dir():
-        return "/Users/bezbodima/Downloads/"
+        return "/home/r56x196/Data/"

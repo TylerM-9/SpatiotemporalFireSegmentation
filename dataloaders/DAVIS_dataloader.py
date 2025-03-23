@@ -45,104 +45,10 @@ def im_normalize(im):
 	imn = (im - im.min()) / max((im.max() - im.min()), 1e-8)
 	return imn
 
-class FIREDataset(Dataset):
-	def __init__(self, inputRes=None,
-			  	 samples_path="/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/data/Mask_Data",
-				 transform=None,
-				 num_frame=4):
-		self.transform = transform
-		self.inputRes = inputRes
-		self.toTensor = tr.ToTensor()
-		self.num_frame = num_frame
-
-		image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
-
-		def numerical_key(filename):
-			# Extract the first number found in the filename
-			numbers = re.findall(r'\d+', filename)
-			return int(numbers[0]) if numbers else -1
-
-		self.image_files = sorted(
-			[
-				os.path.join(samples_path, "Images", f)
-				for f in os.listdir(os.path.join(samples_path, "Images"))
-				if os.path.isfile(os.path.join(samples_path, "Images", f)) 
-				and os.path.splitext(f)[1].lower() in image_extensions
-			],
-			key=lambda x: numerical_key(os.path.basename(x))
-		)[:10]
-
-		self.masks = sorted(
-			[
-				os.path.join(samples_path, "Masks", f)
-				for f in os.listdir(os.path.join(samples_path, "Masks"))
-				if os.path.isfile(os.path.join(samples_path, "Masks", f)) 
-				and os.path.splitext(f)[1].lower() in image_extensions
-			],
-			key=lambda x: numerical_key(os.path.basename(x))
-		)[:10]
-
-		print(self.image_files)
-		print(self.masks)
-
-	def __len__(self):
-		return len(self.image_files) - self.num_frame
-	
-	def __getitem__(self, idx):
-
-		imgs = []
-		for i in range(idx, idx + self.num_frame):
-			img = imageio.imread(self.image_files[i])
-			img = np.array(img, dtype=np.float32)
-			if (self.inputRes is not None):
-				img = cv2.resize(img, (self.inputRes[1], self.inputRes[0]))
-
-			imgs.append(img)
-
-		gt = cv2.imread(self.masks[idx + self.num_frame], 0)
-		gt[gt == 1] = 255
-		frame = imageio.imread(self.image_files[idx + self.num_frame])
 
 
-    # Resize gt and frame
-		if self.inputRes is not None:
-			gt = cv2.resize(gt, (self.inputRes[1], self.inputRes[0]), 
-						interpolation=cv2.INTER_NEAREST)
-			frame = cv2.resize(frame, (self.inputRes[1], self.inputRes[0]))
-		imgs = np.concatenate(imgs,axis=2)
 
-		imgs = np.array(imgs, dtype=np.float32)
-		gt = np.array(gt, dtype=np.float32)
-		frame = np.array(frame, dtype=np.float32)
-
-		# normalize
-		gt = gt / np.max([gt.max(), 1e-8])
-		gt[gt > 0] = 1.0
-
-		pred_gt = frame
-		frame = frame / 255
-		frame = np.subtract(frame, np.array([0.485, 0.456, 0.406], dtype=np.float32))
-		frame = np.true_divide(frame,np.array([0.229, 0.224, 0.225], dtype=np.float32))
-
-		sample = {'images': imgs, 'frame': frame, 'seg_gt': gt,'pred_gt': pred_gt}
-
-		if self.transform is not None:
-			sample = self.transform(sample)
-
-		imgs = sample['images']
-		imgs[np.isnan(imgs)] = 0.
-		imgs[imgs > 255] = 255.0
-		imgs[imgs < 0] = 0.
-		imgs = imgs / 127.5 - 1.
-		sample['images'] = imgs
-		pred_gt = sample['pred_gt']
-		pred_gt[np.isnan(pred_gt)] = 0.
-		pred_gt[pred_gt > 255] = 255.0
-		pred_gt[pred_gt < 0] = 0.
-		pred_gt = pred_gt / 127.5 - 1.
-		sample['pred_gt'] = pred_gt
-		sample = self.toTensor(sample)
-		return sample
+    
 
 class DAVISDataset(Dataset):
 	"""DAVIS 2016 dataset constructed using the PyTorch built-in functionalities"""

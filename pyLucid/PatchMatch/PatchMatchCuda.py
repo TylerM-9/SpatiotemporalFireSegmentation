@@ -13,10 +13,8 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 
 import numpy as np
 import cv2
-import pycuda.autoinit
 import pycuda.driver as drv
 import numpy
-import pycuda.autoinit
 import pycuda.gpuarray as gpuarray
 import numpy as np
 from pycuda.compiler import SourceModule

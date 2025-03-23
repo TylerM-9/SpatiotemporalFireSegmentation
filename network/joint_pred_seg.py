@@ -415,17 +415,17 @@ class FramePredDecoder(nn.Module):
 
 		self.de_layer1 = nn.Sequential(nn.Conv2d(512 * 2, 512, kernel_size=3, stride=1, padding=1),
 									   nn.BatchNorm2d(512),
-									   # nn.ReLU(inplace=True),
+									   nn.ReLU(inplace=True),
 									   nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, bias=False))
 
 		self.de_layer2 = nn.Sequential(nn.Conv2d(512 * 2, 256, kernel_size=3, stride=1, padding=1),
 									   nn.BatchNorm2d(256),
-									   # nn.ReLU(inplace=True),
+									   nn.ReLU(inplace=True),
 									   nn.ConvTranspose2d(256, 256, kernel_size=4, stride=2, bias=False))
 
 		self.de_layer3 = nn.Sequential(nn.Conv2d(256 * 2, 64, kernel_size=3, stride=1, padding=1),
 									   nn.BatchNorm2d(64),
-									   # nn.ReLU(inplace=True),
+									   nn.ReLU(inplace=True),
 									   nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, bias=False),
 									   nn.Conv2d(64, 3, kernel_size=1, stride=1)
 									   )

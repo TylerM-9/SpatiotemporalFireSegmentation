@@ -114,9 +114,9 @@ def main(args):
             inputs, gts = inputs.to(device), gts.to(device)
             pred = netG.forward(inputs)
 
-            D_real = netD(gts)
+            D_real = netD(gts).squeeze(1)
             errD_real = criterion(D_real, real_label)
-            D_fake = netD(pred.detach())
+            D_fake = netD(pred.detach()).squeeze(1)
             errD_fake = criterion(D_fake, fake_label)
 
             if updateD:
@@ -135,7 +135,7 @@ def main(args):
                 # (2) Update G network: maximize log(D(G(z)))
                 ###########################
                 netG.zero_grad()
-                D_fake = netD(pred)
+                D_fake = netD(pred).squeeze(1)
                 errG = criterion(D_fake, real_label)
                 lp_loss = lp_function(pred, gts)
                 total_loss = lp_loss + beta * errG
@@ -171,7 +171,7 @@ def main(args):
                 running_res_dir = os.path.join(save_dir, 'results')
                 if not os.path.exists(running_res_dir):
                     os.makedirs(running_res_dir)
-                imageio.imwrite(os.path.join(running_res_dir, "train_%s.png" % (ii + num_img_tr * epoch)), samples)
+                imageio.imwrite(os.path.join(running_res_dir, "train_%s.png" % (ii + num_img_tr * epoch)), np.uint8(samples))
 
         # Print stuff
         print('[Epoch: %d, numImages: %5d]' % (epoch, (ii + 1)*batch_size))

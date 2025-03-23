@@ -32,8 +32,8 @@ def main(args):
 	device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
 
 	# # Setting other parameters
-	resume_epoch = 0  # Default is 0, change if want to resume
-	nEpochs = 100  # Number of epochs for training (500.000/2079)
+	resume_epoch = 100  # Default is 0, change if want to resume
+	nEpochs = 150  # Number of epochs for training (500.000/2079)
 	batch_size = 1
 	snapshot = 1  # Store a model every snapshot epochs
 	pred_lr = 1e-8
@@ -60,14 +60,14 @@ def main(args):
 
 	netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
 	# Do not have a pre-trained discriminator
-	initialize_netD(netD,os.path.join(save_dir, 'FramePredModels','frame_nums_'+str(num_frame),'NetD_epoch-90.pth'))
+	initialize_netD(netD,os.path.join('/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4','NetD_epoch-99.pth'))
 	seg_enc = SegEncoder()
 	pred_enc = FramePredEncoder(frame_nums=num_frame)
 	pred_dec = FramePredDecoder()
 	j_seg_dec = JointSegDecoder()
 	if resume_epoch == 0:
 		# Do not have pre-trained
-		#initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir,num_frame=num_frame)
+		initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir,num_frame=num_frame)
 		net = STCNN(pred_enc, seg_enc, pred_dec, j_seg_dec)
 	else:
 		net = STCNN(pred_enc, seg_enc, pred_dec, j_seg_dec)
@@ -108,7 +108,11 @@ def main(args):
 											  ])
 
 	# Training dataset and its iterator
+
+	# FIRE DATASET training
 	db_train = db.FIREDataset(inputRes=(400,710),transform=composed_transforms,num_frame=num_frame)
+	#db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
+							   #transform=composed_transforms,num_frame=num_frame)
 	trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
 	num_img_tr = len(trainloader)
 	iter_num = nEpochs * num_img_tr
@@ -192,7 +196,7 @@ def main(args):
 				writer.add_scalar('data/G_loss_iter', errG.item(), ii + num_img_tr * epoch)
 				writer.add_scalar('data/seg_loss_iter', seg_loss.item(), ii + num_img_tr * epoch)
 
-			if (ii + num_img_tr * epoch) % 20 == 0:
+			if (ii + num_img_tr * epoch) % 100 == 0:
 
 				seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
 				seg_pred = 1 / (1 + np.exp(-seg_pred))
@@ -215,16 +219,16 @@ def main(args):
 				running_res_dir = os.path.join(save_dir, modelName+'_results')
 				if not os.path.exists(running_res_dir):
 					os.makedirs(running_res_dir)
-				imageio.imwrite(os.path.join(running_res_dir, "train_%s_s.png" % (ii + num_img_tr * epoch)), np.uint8(samples1))
-				imageio.imwrite(os.path.join(running_res_dir, "train_%s_p.png" % (ii + num_img_tr * epoch)), np.uint8(samples2))
+				imageio.imwrite(os.path.join(running_res_dir, "train_fire%s_s.png" % (ii + num_img_tr * epoch)), np.uint8(samples1))
+				imageio.imwrite(os.path.join(running_res_dir, "train_fire%s_p.png" % (ii + num_img_tr * epoch)), np.uint8(samples2))
 		# Print stuff
 		print('[Epoch: %d, numImages: %5d]' % (epoch, (ii + 1)*batch_size))
 		stop_time = timeit.default_timer()
 		print("Execution time: " + str(stop_time - start_time))
 		# Save the model
 		
-		#if (epoch % snapshot) == snapshot - 1 and epoch != 0:
-			#torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch-' + str(epoch) + '.pth'))
+		if (epoch % snapshot) == snapshot - 1 and epoch != 0:
+			torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_fire_epoch-' + str(epoch) + '.pth'))
 
 	writer.close()
 
@@ -254,7 +258,7 @@ def initialize_netD(netD,model_path):
 
 def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4):
 	print("Loading weights from pretrained NetG")
-	pretrained_netG_dict = torch.load(os.path.join(save_dir,'FramePredModels','frame_nums_'+str(num_frame), 'NetG_epoch-90.pth'))
+	pretrained_netG_dict = torch.load(os.path.join('/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4', 'NetG_epoch-99.pth'))
 
 	model_dict = pred_enc.state_dict()
 	# 1. filter out unnecessary keys
@@ -266,13 +270,13 @@ def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4
 	model_dict = pred_dec.state_dict()
 	# 1. filter out unnecessary keys
 	pretrained_dict = {k: v for k, v in pretrained_netG_dict.items() if k in model_dict}
-	# 2. overwrite entries in the existing state dicthttps://file+.vscode-resource.vscode-cdn.net/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/output/STCNN_frame_4_results/train_600_p.png?version%3D1739845955198
+	# 2. overwrite entries in the existing state dict
 	model_dict.update(pretrained_dict)
 	pred_dec.load_state_dict(model_dict)
 
 
 	print("Loading weights from pretrained SegBranch")  #'Seg_UPerNet_Att_single',
-	pretrained_SegBranch_dict = torch.load(os.path.join(save_dir,'Seg_Branch','1Seg_Branch_epoch-11999.pth'))
+	pretrained_SegBranch_dict = torch.load(os.path.join('/home/r56x196/ondemand/data/sys/myjobs/projects/default/2/output/Seg_Branch','Seg_Branch_epoch-11999.pth'))
 	model_dict = seg_enc.state_dict()
 	# 1. filter out unnecessary keys
 	pretrained_dict = {k[8:]: v for k, v in pretrained_SegBranch_dict.items() if k[8:] in model_dict}
@@ -294,7 +298,7 @@ def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4
 if __name__ == "__main__":
 	main_arg_parser = argparse.ArgumentParser(description="parser for train frame predict")
 
-	main_arg_parser.add_argument("--frame_nums", type=int, default=3,
+	main_arg_parser.add_argument("--frame_nums", type=int, default=4,
 								 help="input frame nums")
 
 	args = main_arg_parser.parse_args()
