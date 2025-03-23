@@ -16,6 +16,10 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import imageio
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, Subset
+from sklearn.model_selection import KFold
+
+from sklearn.metrics import roc_auc_score, f1_score
 
 from network.joint_pred_seg import STCNN,FramePredDecoder,FramePredEncoder,SegEncoder,JointSegDecoder
 from network.googlenet import Inception3
@@ -32,7 +36,7 @@ def main(args):
 	device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
 
 	# # Setting other parameters
-	resume_epoch = 0  # Default is 0, change if want to resume
+	resume_epoch = 12  # Default is 0, change if want to resume
 	nEpochs = 100  # Number of epochs for training (500.000/2079)
 	batch_size = 1
 	snapshot = 1  # Store a model every snapshot epochs
@@ -60,21 +64,21 @@ def main(args):
 
 	netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
 	# Do not have a pre-trained discriminator
-	initialize_netD(netD,os.path.join(save_dir, 'FramePredModels','frame_nums_'+str(num_frame),'NetD_epoch-90.pth'))
+	initialize_netD(netD,os.path.join(save_dir, 'FramePredModels','frame_nums_'+str(num_frame),'NetD_epoch-99.pth'))
 	seg_enc = SegEncoder()
 	pred_enc = FramePredEncoder(frame_nums=num_frame)
 	pred_dec = FramePredDecoder()
 	j_seg_dec = JointSegDecoder()
 	if resume_epoch == 0:
 		# Do not have pre-trained
-		#initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir,num_frame=num_frame)
+		initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir,num_frame=num_frame)
 		net = STCNN(pred_enc, seg_enc, pred_dec, j_seg_dec)
 	else:
 		net = STCNN(pred_enc, seg_enc, pred_dec, j_seg_dec)
-		print("Updating weights from: {}".format(
-			os.path.join(save_model_dir, modelName + '_epoch-' + str(resume_epoch - 1) + '.pth')))
+		print("Updating weights froxm: {}".format(
+			os.path.join('./output', modelName + '_epoch-' + str(resume_epoch - 1) + '.pth')))
 		net.load_state_dict(
-			torch.load(os.path.join(save_model_dir, modelName + '_epoch-' + str(resume_epoch - 1) + '.pth'),
+			torch.load(os.path.join('./output', modelName + '_epoch-' + str(resume_epoch - 1) + '.pth'),
 					   map_location=lambda storage, loc: storage))
 
 
@@ -109,6 +113,8 @@ def main(args):
 
 	# Training dataset and its iterator
 	db_train = db.FIREDataset(inputRes=(400,710),transform=composed_transforms,num_frame=num_frame)
+	#db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join('/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/data/DAVIS16_samples_list.txt'),
+							   #transform=composed_transforms,num_frame=num_frame)
 	trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
 	num_img_tr = len(trainloader)
 	iter_num = nEpochs * num_img_tr
@@ -116,121 +122,213 @@ def main(args):
 	print("Training Network")
 	real_label = torch.ones(batch_size).float().to(device)
 	fake_label = torch.zeros(batch_size).float().to(device)
-	for epoch in range(resume_epoch, nEpochs):
-		start_time = timeit.default_timer()
-
-		for ii, sample_batched in enumerate(trainloader):
-
-			seqs, frames, gts, pred_gts = sample_batched['images'], sample_batched['frame'],sample_batched['seg_gt'], \
-										 sample_batched['pred_gt']
-
-			# Forward-Backward of the mini-batch
-			seqs.requires_grad_()
-			frames.requires_grad_()
-
-			seqs, frames, gts, pred_gts = seqs.to(device), frames.to(device), gts.to(device),pred_gts.to(device)
-
-			pred_gts = F.upsample(pred_gts, size=(100, 178), mode='bilinear', align_corners=False)
-
-			pred_gts = pred_gts.detach()
-			seg_res, pred = net.forward(seqs, frames)
-
-			D_real = netD(pred_gts).squeeze(1)
-			errD_real = criterion(D_real, real_label)
-			D_fake = netD(pred.detach()).squeeze(1)
-			errD_fake = criterion(D_fake, fake_label)
-
-			optimizer.zero_grad()
-			seg_loss = seg_criterion(seg_res[-1], gts)
-			for i in reversed(range(len(seg_res) - 1)):
-				seg_loss = seg_loss + (1 - curr_iter / iter_num) * seg_criterion(seg_res[i],gts)
-
-			seg_loss.backward()
-			optimizer.step()
-			curr_iter += 1
-			if updateD:
-				############################
-				# (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
-				###########################
-				# train with real
-				netD.zero_grad()
-				# train with fake
-				d_loss = errD_fake + errD_real
-				d_loss.backward()
-				optimizerD.step()
-
-			if updateG:
-				############################
-				# (2) Update G network: maximize log(D(G(z)))
-				###########################
-				optimizerG.zero_grad()
-				D_fake = netD(pred).squeeze(1)
-				errG = criterion(D_fake, real_label)
-
-				lp_loss = lp_function(pred, pred_gts)
-				total_loss = lp_loss + beta * errG
-				total_loss.backward()
-				optimizerG.step()
-
-			if (errD_fake.data < margin).all() or (errD_real.data < margin).all():
-				updateD = False
-			if (errD_fake.data > (1. - margin)).all() or (errD_real.data > (1. - margin)).all():
-				updateG = False
-			if not updateD and not updateG:
-				updateD = True
-				updateG = True
-
-			if (ii + num_img_tr * epoch) % 5 == 4:
-				print(
-					"Iters: [%2d] time: %4.4f, lp_loss: %.8f, G_loss: %.8f,seg_loss: %.8f"
-					% (ii + num_img_tr * epoch, timeit.default_timer() - start_time, lp_loss.item(),errG.item(), seg_loss.item())
-				)
-				print('updateD:', updateD, 'updateG:', updateG)
-			if (ii + num_img_tr * epoch) % 10 == 9:
-				writer.add_scalar('data/loss_iter', total_loss.item(), ii + num_img_tr * epoch)
-				writer.add_scalar('data/lp_loss_iter', lp_loss.item(), ii + num_img_tr * epoch)
-				writer.add_scalar('data/G_loss_iter', errG.item(), ii + num_img_tr * epoch)
-				writer.add_scalar('data/seg_loss_iter', seg_loss.item(), ii + num_img_tr * epoch)
-
-			if (ii + num_img_tr * epoch) % 20 == 0:
-
-				seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
-				seg_pred = 1 / (1 + np.exp(-seg_pred))
-				gt_sample = gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])*255
 
 
-				seg_pred = seg_pred.transpose([1, 2, 0])*255
-				frame_sample = frames[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-				frame_sample = inverse_transform(frame_sample)*255
-				gt_sample3 = np.concatenate([gt_sample,gt_sample,gt_sample],axis=2)
+	k_folds = 5  # Number of folds
 
-				seg_pred3 = np.concatenate([seg_pred,seg_pred,seg_pred],axis=2)
-				samples1 = np.concatenate((seg_pred3, gt_sample3, frame_sample), axis=0)
+	# Initialize KFold
+	kf = KFold(n_splits=k_folds, shuffle=False)
 
-				pred_sample = pred[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-				frame_sample = pred_gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-				samples2 = np.concatenate((pred_sample, frame_sample), axis=0)
-				samples2 = inverse_transform(samples2) * 255
-				print("Saving sample ...")
-				running_res_dir = os.path.join(save_dir, modelName+'_results')
-				if not os.path.exists(running_res_dir):
-					os.makedirs(running_res_dir)
-				imageio.imwrite(os.path.join(running_res_dir, "train_%s_s.png" % (ii + num_img_tr * epoch)), np.uint8(samples1))
-				imageio.imwrite(os.path.join(running_res_dir, "train_%s_p.png" % (ii + num_img_tr * epoch)), np.uint8(samples2))
-		# Print stuff
-		print('[Epoch: %d, numImages: %5d]' % (epoch, (ii + 1)*batch_size))
-		stop_time = timeit.default_timer()
-		print("Execution time: " + str(stop_time - start_time))
-		# Save the model
-		
-		#if (epoch % snapshot) == snapshot - 1 and epoch != 0:
-			#torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch-' + str(epoch) + '.pth'))
+	# Perform K-Fold Cross-Validation
+	for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(db_train)))):  # Get indices for K-fold
+		print(f"\nFold {fold + 1}/{k_folds}")
 
-	writer.close()
+		# Create training and validation subsets
+		train_subset = Subset(db_train, train_idx)
+		val_subset = Subset(db_train, val_idx)
+
+		# Create DataLoaders for training and validation
+		train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=False, num_workers=4)
+		val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False, num_workers=4)
+
+		for epoch in range(resume_epoch, nEpochs):
+			start_time = timeit.default_timer()
+
+			for ii, sample_batched in enumerate(train_loader):
+
+				seqs, frames, gts, pred_gts = sample_batched['images'], sample_batched['frame'],sample_batched['seg_gt'], \
+											sample_batched['pred_gt']
+
+				# Forward-Backward of the mini-batch
+				seqs.requires_grad_()
+				frames.requires_grad_()
+
+				seqs, frames, gts, pred_gts = seqs.to(device), frames.to(device), gts.to(device),pred_gts.to(device)
+
+				pred_gts = F.upsample(pred_gts, size=(100, 178), mode='bilinear', align_corners=False)
+
+				pred_gts = pred_gts.detach()
+				seg_res, pred = net.forward(seqs, frames)
+
+				D_real = netD(pred_gts).squeeze(1)
+				errD_real = criterion(D_real, real_label)
+				D_fake = netD(pred.detach()).squeeze(1)
+				errD_fake = criterion(D_fake, fake_label)
+
+				optimizer.zero_grad()
+				seg_loss = seg_criterion(seg_res[-1], gts)
+				for i in reversed(range(len(seg_res) - 1)):
+					seg_loss = seg_loss + (1 - curr_iter / iter_num) * seg_criterion(seg_res[i],gts)
+
+				seg_loss.backward()
+				optimizer.step()
+				curr_iter += 1
+				lp_loss = None
+				if updateD:
+					############################
+					# (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
+					###########################
+					# train with real
+					netD.zero_grad()
+					# train with fake
+					d_loss = errD_fake + errD_real
+					d_loss.backward()
+					optimizerD.step()
+
+				if updateG:
+					############################
+					# (2) Update G network: maximize log(D(G(z)))
+					###########################
+					optimizerG.zero_grad()
+					D_fake = netD(pred).squeeze(1)
+					errG = criterion(D_fake, real_label)
+
+					lp_loss = lp_function(pred, pred_gts)
+					total_loss = lp_loss + beta * errG
+					total_loss.backward()
+					optimizerG.step()
+
+				if (errD_fake.data < margin).all() or (errD_real.data < margin).all():
+					updateD = False
+				if (errD_fake.data > (1. - margin)).all() or (errD_real.data > (1. - margin)).all():
+					updateG = False
+				if not updateD and not updateG:
+					updateD = True
+					updateG = True
+
+				if (ii + num_img_tr * epoch) % 5 == 4 and lp_loss:
+					print(
+						"Iters: [%2d] time: %4.4f, lp_loss: %.8f, G_loss: %.8f,seg_loss: %.8f"
+						% (ii + num_img_tr * epoch, timeit.default_timer() - start_time, lp_loss.item(),errG.item(), seg_loss.item())
+					)
+					print('updateD:', updateD, 'updateG:', updateG)
+				if (ii + num_img_tr * epoch) % 10 == 9 and lp_loss:
+					writer.add_scalar('data/loss_iter', total_loss.item(), ii + num_img_tr * epoch)
+					writer.add_scalar('data/lp_loss_iter', lp_loss.item(), ii + num_img_tr * epoch)
+					writer.add_scalar('data/G_loss_iter', errG.item(), ii + num_img_tr * epoch)
+					writer.add_scalar('data/seg_loss_iter', seg_loss.item(), ii + num_img_tr * epoch)
+
+				if (ii + num_img_tr * epoch) % 20 == 0:
+
+					seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
+					seg_pred = 1 / (1 + np.exp(-seg_pred))
+
+					gt_sample = gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])*255
+
+
+					seg_pred = seg_pred.transpose([1, 2, 0])*255
+					frame_sample = frames[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
+					frame_sample = inverse_transform(frame_sample)*255
+					gt_sample3 = np.concatenate([gt_sample,gt_sample,gt_sample],axis=2)
+
+					seg_pred3 = np.concatenate([seg_pred,seg_pred,seg_pred],axis=2)
+					samples1 = np.concatenate((seg_pred3, gt_sample3, frame_sample), axis=0)
+
+					pred_sample = pred[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
+					frame_sample = pred_gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
+					samples2 = np.concatenate((pred_sample, frame_sample), axis=0)
+					samples2 = inverse_transform(samples2) * 255
+					print("Saving sample ...")
+					running_res_dir = os.path.join(save_dir, modelName+'_results')
+					if not os.path.exists(running_res_dir):
+						os.makedirs(running_res_dir)
+					imageio.imwrite(os.path.join(running_res_dir, "train_%s_s.png" % (ii + num_img_tr * epoch)), np.uint8(samples1))
+					imageio.imwrite(os.path.join(running_res_dir, "train_%s_p.png" % (ii + num_img_tr * epoch)), np.uint8(samples2))
+			# Print stuff
+			print('[Epoch: %d, numImages: %5d]' % (epoch, (ii + 1)*batch_size))
+			stop_time = timeit.default_timer()
+			print("Execution time: " + str(stop_time - start_time))
+			# Save the model
+			
+			if (epoch % snapshot) == snapshot - 1 and epoch != 0:
+				
+				metrics = None
+				total = 1
+				for ii, sample_batched in enumerate(val_loader):
+
+					seqs, frames, gts, pred_gts = sample_batched['images'], sample_batched['frame'],sample_batched['seg_gt'], \
+											sample_batched['pred_gt']
+					
+					seg_res, pred = net.forward(seqs, frames)
+					seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
+					seg_pred = 1 / (1 + np.exp(-seg_pred))
+
+					seg_pred = (seg_pred > 0.5).astype(np.uint8)
+					if not metrics:
+						metrics = compute_metrics(gts.cpu().numpy(), seg_pred)
+						print("Single metrics: ", metrics)
+					else:
+						new_metrics = compute_metrics(gts.cpu().numpy(), seg_pred)
+						for key in metrics:
+							metrics[key] += new_metrics[key]  
+							total += 1
+				
+				for key in metrics:
+					metrics[key] /= total 
+
+
+				print("Avg metrics: ", metrics)
+
+				print(metrics)
+				torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch-' + str(epoch) + '.pth'))
+
+
+
+		writer.close()
 
 def inverse_transform(images):
 	return (images+1.)/2.
+def compute_metrics(y_true, y_pred):
+	"""
+	Compute Precision, Recall, F1-score, AUC, Sensitivity, Specificity, and IoU for image segmentation.
 
+	Parameters:
+		y_true (numpy array): Ground truth binary mask (0s and 1s).
+		y_pred (numpy array): Predicted binary mask (0s and 1s).
+
+	Returns:
+	Dictionary containing all computed metrics.
+	"""
+	# Flatten the arrays
+
+	y_true = y_true.flatten()
+	y_pred = y_pred.flatten()
+
+
+	print("groud truth unique: ", np.unique(y_true))
+	print("seg prediction unique: ", np.unique(y_pred))
+	# Compute TP, FP, TN, FN
+	TP = np.sum((y_pred == 1) & (y_true == 1))
+	FP = np.sum((y_pred == 1) & (y_true == 0))
+	TN = np.sum((y_pred == 0) & (y_true == 0))
+	FN = np.sum((y_pred == 0) & (y_true == 1))
+
+	# Compute Metrics
+	precision = TP / (TP + FP) * 100 if (TP + FP) > 0 else 0
+	recall = TP / (TP + FN) * 100 if (TP + FN) > 0 else 0
+	specificity = TN / (TN + FP) * 100 if (TN + FP) > 0 else 0
+	f1 = f1_score(y_true, y_pred) * 100  # Using sklearn
+	auc = roc_auc_score(y_true, y_pred) * 100  # Using sklearn
+	iou = TP / (TP + FP + FN) * 100 if (TP + FP + FN) > 0 else 0
+
+	return {
+        "Precision (%)": precision,
+        "Recall (Sensitivity) (%)": recall,
+        "F1-Score (%)": f1,
+        "AUC (%)": auc,
+        "Specificity (%)": specificity,
+        "IoU (%)": iou
+    }
 
 def initialize_netD(netD,model_path):
 	# Load the Inception-v3 model from torch hub with pretrained weights
@@ -254,7 +352,8 @@ def initialize_netD(netD,model_path):
 
 def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4):
 	print("Loading weights from pretrained NetG")
-	pretrained_netG_dict = torch.load(os.path.join(save_dir,'FramePredModels','frame_nums_'+str(num_frame), 'NetG_epoch-90.pth'))
+	pretrained_path = os.path.join('/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/output', 'NetG_epoch-99.pth')
+	pretrained_netG_dict = torch.load(pretrained_path, map_location=torch.device('cpu'))
 
 	model_dict = pred_enc.state_dict()
 	# 1. filter out unnecessary keys
@@ -266,13 +365,14 @@ def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4
 	model_dict = pred_dec.state_dict()
 	# 1. filter out unnecessary keys
 	pretrained_dict = {k: v for k, v in pretrained_netG_dict.items() if k in model_dict}
-	# 2. overwrite entries in the existing state dicthttps://file+.vscode-resource.vscode-cdn.net/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/output/STCNN_frame_4_results/train_600_p.png?version%3D1739845955198
+	# 2. overwrite entries in the existing state dict
 	model_dict.update(pretrained_dict)
 	pred_dec.load_state_dict(model_dict)
 
 
+
 	print("Loading weights from pretrained SegBranch")  #'Seg_UPerNet_Att_single',
-	pretrained_SegBranch_dict = torch.load(os.path.join(save_dir,'Seg_Branch','1Seg_Branch_epoch-11999.pth'))
+	pretrained_SegBranch_dict = torch.load(os.path.join(save_dir,'Seg_Branch_epoch-11999.pth'), map_location=torch.device('cpu'))
 	model_dict = seg_enc.state_dict()
 	# 1. filter out unnecessary keys
 	pretrained_dict = {k[8:]: v for k, v in pretrained_SegBranch_dict.items() if k[8:] in model_dict}
@@ -294,7 +394,7 @@ def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4
 if __name__ == "__main__":
 	main_arg_parser = argparse.ArgumentParser(description="parser for train frame predict")
 
-	main_arg_parser.add_argument("--frame_nums", type=int, default=3,
+	main_arg_parser.add_argument("--frame_nums", type=int, default=4,
 								 help="input frame nums")
 
 	args = main_arg_parser.parse_args()

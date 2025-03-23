@@ -43,7 +43,7 @@ def dreamData(img, gt, bgimg, consequent_frames):
     if np.random.randint(2):
         new_img,new_msk=spline_transform_multi(img,mask)
         while np.all(seg_backgr==0) and np.all(new_msk==0):
-            print 'All objects are missed, so we have to retry random transform.'
+            print('All objects are missed, so we have to retry random transform.')
             new_img,new_msk=spline_transform_multi(img,mask)
         new_img,new_seg=blend_mask_multi(seg_backgr,new_img,back_img,new_msk)
     else:
@@ -269,7 +269,7 @@ def augment_image_mask_illumination_deform_random_img_multi(im0,gt0,bg0=None):
     if rotate:
         gt_rot_crop=rotate_image(gt0,angle,cv2.INTER_NEAREST)
         while np.all(gt_rot_crop==0):
-            print 'After rotating, the objects are missed. So we have to try a different angle.'
+            print('After rotating, the objects are missed. So we have to try a different angle.')
             angle=np.random.randint(-15,16)*2
             gt_rot_crop=rotate_image(gt0,angle,cv2.INTER_NEAREST)
         im1_rot_crop=rotate_image(im0,angle,cv2.INTER_CUBIC)

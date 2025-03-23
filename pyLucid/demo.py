@@ -4,8 +4,8 @@ from PIL import Image
 import numpy as np
 from lucidDream import dreamData
 
-Iorg=cv2.imread('img.jpg')
-Morg=Image.open('gt.png')
+Iorg=cv2.imread('/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/data/Mask_Data/Images/image_0.jpg')
+Morg=Image.open('/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/data/Mask_Data/Masks/image_0.png')
 palette=Morg.getpalette()
 
 bg=paint(Iorg,np.array(Morg),False)

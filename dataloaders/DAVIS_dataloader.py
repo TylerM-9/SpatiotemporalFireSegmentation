@@ -70,7 +70,7 @@ class FIREDataset(Dataset):
 				and os.path.splitext(f)[1].lower() in image_extensions
 			],
 			key=lambda x: numerical_key(os.path.basename(x))
-		)[:10]
+		)[:20]
 
 		self.masks = sorted(
 			[
@@ -80,10 +80,8 @@ class FIREDataset(Dataset):
 				and os.path.splitext(f)[1].lower() in image_extensions
 			],
 			key=lambda x: numerical_key(os.path.basename(x))
-		)[:10]
+		)[:100]
 
-		print(self.image_files)
-		print(self.masks)
 
 	def __len__(self):
 		return len(self.image_files) - self.num_frame
@@ -241,6 +239,8 @@ class DAVIS_First_Frame_Dataset(Dataset):
 		self.frame_nums = frame_nums
 		# Initialize the per sequence images for online training
 
+		print(db_root_dir)
+		print()
 		names_img = np.sort([f for f in os.listdir(os.path.join(db_root_dir, 'first_frame/', str(seq_name),'dream'))
 							 if f.endswith(".jpg")])
 		img_list = list(map(lambda x: os.path.join(db_root_dir,'first_frame/', str(seq_name), 'dream', x), names_img))

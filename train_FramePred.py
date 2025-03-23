@@ -22,6 +22,8 @@ from network.framepred import FramePredNet
 from dataloaders import custom_transforms as tr
 from dataloaders import VID_dataloader as db
 from mypath import Path
+from sklearn.metrics import roc_auc_score, f1_score
+
 
 def main(args):
     # # Select which GPU, -1 if CPU
@@ -29,7 +31,7 @@ def main(args):
     device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
     
     # # Setting other parameters
-    resume_epoch = 0  # Default is 0, change if want to resume
+    resume_epoch = 100  # Default is 0, change if want to resume
     nEpochs = 100  # Number of epochs for training (500.000/2079)
     batch_size = 3
     snapshot = 10  # Store a model every snapshot epochs
@@ -160,7 +162,7 @@ def main(args):
                 writer.add_scalar('data/lp_loss_iter', lp_loss.item(), ii + num_img_tr * epoch)
                 writer.add_scalar('data/adv_loss_iter', errG.item(), ii + num_img_tr * epoch)
 
-            if (ii + num_img_tr * epoch) % 100 == 0:
+            if (ii + num_img_tr * epoch) % 1000 == 0:
                 samples = pred[0, :, :, :].data.cpu().numpy()
                 gt = gts[0, :, :, :].data.cpu().numpy()
                 samples = samples.transpose([1, 2, 0])
@@ -180,6 +182,8 @@ def main(args):
         # Save the model
         if (epoch % snapshot) == snapshot-1:
             print("save models")
+            metrics = compute_metrics()
+            
             torch.save(netG.state_dict(), os.path.join(save_dir, modelGName + '_epoch-' + str(epoch) + '.pth'))
             torch.save(netD.state_dict(), os.path.join(save_dir, modelDName + '_epoch-' + str(epoch) + '.pth'))
     writer.close()
@@ -221,6 +225,7 @@ def initialize_netD(net):
     model_dict.update(pretrained_dict)
     # 3. load the new state dict
     net.load_state_dict(model_dict)
+
 
 
 

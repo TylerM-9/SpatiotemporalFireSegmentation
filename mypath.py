@@ -2,7 +2,7 @@
 class Path(object):
     @staticmethod
     def db_root_dir():
-        return '/Users/bezbodima/Downloads/DAV'
+        return '/Users/bezbodima/Downloads/DAVIS'
 
     @staticmethod
     def save_root_dir():

@@ -39,7 +39,7 @@ if not os.path.exists(save_dir):
 	os.makedirs(os.path.join(save_dir))
 
 parentModelName = 'STCNN_frame_'+str(args.frame_nums)
-save_model_dir = os.path.join(save_dir, parentModelName)
+save_model_dir = os.path.join(save_dir)
 save_online_model_dir = os.path.join(save_dir, parentModelName)
 if not os.path.exists(save_online_model_dir):
 	os.makedirs(os.path.join(save_online_model_dir))
@@ -47,7 +47,7 @@ if not os.path.exists(save_online_model_dir):
 vis_res = 1  # Visualize the results?
 nEpochs = 6
 snapshot = nEpochs  # Store a model every snapshot epochs
-parentEpoch = 10
+parentEpoch = 12
 # Parameters in p are used for the name of the model
 trainBatch = 1  # Number of Images in each mini-batch
 seed = 0

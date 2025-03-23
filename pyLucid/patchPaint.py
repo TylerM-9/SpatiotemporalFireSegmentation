@@ -1,7 +1,7 @@
 import numpy as np 
 import cv2
 import matplotlib.pyplot as plt
-from PatchMatch.PatchMatchCuda import PatchMatch
+from .PatchMatch.PatchMatchCuda import PatchMatch
 
 def paint(Iorg, Mask, verbose=True, sigma=0.1):
     Iorg=cv2.cvtColor(Iorg,cv2.COLOR_BGR2Lab)

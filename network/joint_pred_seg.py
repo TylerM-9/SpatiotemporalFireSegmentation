@@ -415,17 +415,17 @@ class FramePredDecoder(nn.Module):
 
 		self.de_layer1 = nn.Sequential(nn.Conv2d(512 * 2, 512, kernel_size=3, stride=1, padding=1),
 									   nn.BatchNorm2d(512),
-									   # nn.ReLU(inplace=True),
+									   nn.ReLU(inplace=True),
 									   nn.ConvTranspose2d(512, 512, kernel_size=4, stride=2, bias=False))
 
 		self.de_layer2 = nn.Sequential(nn.Conv2d(512 * 2, 256, kernel_size=3, stride=1, padding=1),
 									   nn.BatchNorm2d(256),
-									   # nn.ReLU(inplace=True),
+									   nn.ReLU(inplace=True),
 									   nn.ConvTranspose2d(256, 256, kernel_size=4, stride=2, bias=False))
 
 		self.de_layer3 = nn.Sequential(nn.Conv2d(256 * 2, 64, kernel_size=3, stride=1, padding=1),
 									   nn.BatchNorm2d(64),
-									   # nn.ReLU(inplace=True),
+									   nn.ReLU(inplace=True),
 									   nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, bias=False),
 									   nn.Conv2d(64, 3, kernel_size=1, stride=1)
 									   )
@@ -540,7 +540,7 @@ class JointSegDecoder(nn.Module):
 		input_size = conv5.size()
 		ppm_out = [conv5]
 		for pool_scale, pool_conv in zip(self.ppm_pooling, self.ppm_conv):
-			ppm_out.append(pool_conv(nn.functional.upsample(
+			ppm_out.append(pool_conv(nn.functional.interpolate(
 				pool_scale(conv5),
 				(input_size[2], input_size[3]),
 				mode='bilinear', align_corners=False)))
@@ -552,7 +552,7 @@ class JointSegDecoder(nn.Module):
 
 		fpn_feature_list = [f]
 		###########
-		pred_de_feats[0] = nn.functional.upsample(pred_de_feats[0], size=f.size()[2:], mode='bilinear', align_corners=False)
+		pred_de_feats[0] = nn.functional.interpolate(pred_de_feats[0], size=f.size()[2:], mode='bilinear', align_corners=False)
 		###########
 
 		for i in reversed(range(len(conv_out) - 1)):
@@ -567,7 +567,7 @@ class JointSegDecoder(nn.Module):
 			joint_feature = torch.cat([f, pred_de_feats[2-i]], 1)
 			joint_feature = self.joint_fpn_out[i](joint_feature)
 
-			seg_res = F.upsample(seg_res, size=conv_x.size()[2:], mode='bilinear', align_corners=False)
+			seg_res = F.interpolate(seg_res, size=conv_x.size()[2:], mode='bilinear', align_corners=False)
 			seg_res = F.sigmoid(seg_res)
 			joint_feature = self.att_out[i]([joint_feature, seg_res])
 			seg_res = self.score_out[i](joint_feature)
@@ -579,7 +579,7 @@ class JointSegDecoder(nn.Module):
 		output_size = fpn_feature_list[0].size()[2:]
 		fusion_list = [fpn_feature_list[0]]
 		for i in range(1, len(fpn_feature_list)):
-			fusion_list.append(nn.functional.upsample(
+			fusion_list.append(nn.functional.interpolate(
 				fpn_feature_list[i],
 				output_size,
 				mode='bilinear', align_corners=False))
@@ -614,7 +614,7 @@ class STCNN(nn.Module):
 
 		if isinstance(seg_res,list):
 			for i in range(len(seg_res)):
-				seg_res[i] = F.upsample(seg_res[i], size=frame.size()[2:], mode='bilinear', align_corners=False)
+				seg_res[i] = F.interpolate(seg_res[i], size=frame.size()[2:], mode='bilinear', align_corners=False)
 		else:
 			seg_res = F.upsample(seg_res, size=frame.size()[2:], mode='bilinear', align_corners=False)
 

@@ -13,10 +13,12 @@ with open(os.path.join(db_root_dir, 'ImageSets/480p/', 'val.txt')) as f:
 
 for i in range(len(seqnames)):
 	seq_name = seqnames[i].strip()
+	print(seq_name)
 	save_path = os.path.join(save_dir,seq_name)
 	dream_dir = os.path.join(save_path,'dream')
 	print(dream_dir)
 	if not os.path.exists(dream_dir):
+		print(dream_dir)
 		os.makedirs(os.path.join(dream_dir))
 
 	names_img = np.sort(os.listdir(os.path.join(db_root_dir, str(seq_name))))
