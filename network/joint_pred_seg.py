@@ -10,6 +10,8 @@ import math
 
 from layers.layers import interp_surgery
 
+from torchvision.models.vision_transformer import vit_b_16
+
 
 
 def crop_like(x, target):
@@ -37,6 +39,43 @@ def ConvBatchNormReLU(in_channels,out_channels,kernel_size=3,stride=1,padding=1,
 					  stride=stride, padding=padding, dilation=dilation, bias=bias),
 			nn.BatchNorm2d(out_channels),
 			)
+
+class SimpleAttentionBlock(nn.Module):
+    def __init__(self, in_channels=2048, out_channels=256, reduction_ratio=8):
+        super(SimpleAttentionBlock, self).__init__()
+        
+        # Compute reduced channels
+        reduced_channels = in_channels // reduction_ratio
+        
+        # Channel Attention Mechanism
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)  # Output: (batch, in_channels, 1, 1)
+        self.fc1 = nn.Linear(in_channels, reduced_channels)
+        self.fc2 = nn.Linear(reduced_channels, in_channels)
+        self.sigmoid = nn.Sigmoid()
+        
+        # Output projection
+        self.fc_out = nn.Linear(in_channels, out_channels)
+        
+    def forward(self, x):
+        batch, channels, _, _ = x.shape  # Input shape (batch, 2048, H, W)
+        
+        # Global Average Pooling
+        pooled = self.global_avg_pool(x).view(batch, channels)  # Shape: (batch, 2048)
+        
+        # Attention Weights
+        attention = self.fc1(pooled)
+        attention = torch.relu(attention)
+        attention = self.fc2(attention)
+        attention = self.sigmoid(attention)  # Shape: (batch, 2048)
+        
+        # Reweight input
+        x = x * attention.view(batch, channels, 1, 1)  # Broadcast multiply
+        
+        # Reduce to 256 channels
+        x = x.mean(dim=(2, 3))  # Global Average Pooling over spatial dimensions
+        x = self.fc_out(x)  # Shape: (batch, 256)
+        
+        return x
 
 class RegionBottleneck(nn.Module):
 	def __init__(self, planes):
@@ -334,6 +373,151 @@ class SegDecoder(nn.Module):
 		for m in self.modules():
 			if isinstance(m, nn.BatchNorm2d):
 				m.eval()
+
+class SegDecoderNoPPM(SegDecoder):
+    def __init__(self, num_class=1, fc_dim=2048,
+                 use_softmax=False, fpn_inplanes=(256, 512, 1024, 2048),
+                 fpn_dim=256, freez_bn=True):
+        super(SegDecoderNoPPM, self).__init__(
+            num_class=num_class, fc_dim=fc_dim, use_softmax=use_softmax,
+            fpn_inplanes=fpn_inplanes, fpn_dim=fpn_dim, freez_bn=freez_bn
+        )
+        
+        # Add 1x1 Conv to replace PPM and match FPN input size
+        self.reduce_channels = nn.Conv2d(fc_dim, fpn_dim, kernel_size=1, bias=False)
+
+    def forward(self, conv_out, segSize=None):
+        results = []
+        conv5 = conv_out[-1]  # (batch, 2048, 38, 38)
+
+        # 🚀 Reduce channels from 2048 → 256
+        f = self.reduce_channels(conv5)  # Now (batch, 256, 38, 38)
+
+        seg_res = self.score_out[-1](f)
+        results.append(seg_res)
+
+        fpn_feature_list = [f]
+        for i in reversed(range(len(conv_out) - 1)):
+            conv_x = conv_out[i]
+            conv_x = self.fpn_in[i](conv_x)  # Lateral connection
+
+            f = crop_like(self.upscale[i](f), conv_x)  # Top-down connection
+            f = conv_x + f
+            f_1 = self.fpn_out[i](f)
+
+            seg_res = F.upsample(seg_res, size=conv_x.size()[2:], mode='bilinear', align_corners=False)
+            seg_res = torch.sigmoid(seg_res)
+            f_1 = self.att_out[i]([f_1, seg_res])
+            seg_res = self.score_out[i](f_1)
+            results.append(seg_res)
+
+            fpn_feature_list.append(f_1)
+
+        fpn_feature_list.reverse()
+        output_size = fpn_feature_list[0].size()[2:]
+        fusion_list = [fpn_feature_list[0]]
+        for i in range(1, len(fpn_feature_list)):
+            fusion_list.append(F.upsample(fpn_feature_list[i], output_size, mode='bilinear', align_corners=False))
+        fusion_out = torch.cat(fusion_list, 1)
+        x = self.conv_last(fusion_out)
+        results.append(x)
+
+        return results
+
+class ViTFeatureExtractor(nn.Module):
+    def __init__(self, input_dim=2048, output_dim=256, img_size=16, out_size=38):
+        super(ViTFeatureExtractor, self).__init__()
+
+        self.vit = vit_b_16(pretrained=True)
+        self.vit.heads = nn.Identity()  # Remove classification head
+
+        self.input_proj = nn.Conv2d(input_dim, 768, kernel_size=1)
+        self.output_proj = nn.Conv2d(768, output_dim, kernel_size=1)
+        self.upsample = nn.Upsample(size=(out_size, out_size), mode='bilinear', align_corners=False)
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+        x = self.input_proj(x)  # (B, 768, 16, 16)
+        x = self.vit(x)  # (B, 256, 768)
+        x = x.transpose(1, 2).reshape(B, 768, H, W)  # (B, 768, 16, 16)
+        x = self.output_proj(x)  # (B, 256, 16, 16)
+        return self.upsample(x)  # (B, 256, 38, 38)
+
+class SegDecoderViT(nn.Module):
+    def __init__(self, num_class=1, fpn_inplanes=(256, 512, 1024, 2048), fpn_dim=256, freeze_bn=True):
+        super(SegDecoderViT, self).__init__()
+
+        self.vit = ViTFeatureExtractor()
+        
+        self.fpn_in = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(fpn_inplane, fpn_dim, kernel_size=1, bias=False),
+                nn.BatchNorm2d(fpn_dim),
+                nn.ReLU(inplace=True)
+            ) for fpn_inplane in fpn_inplanes[:-1]
+        ])
+
+        self.fpn_out = nn.ModuleList([
+            nn.Sequential(nn.Conv2d(fpn_dim, fpn_dim, kernel_size=3, padding=1, bias=False),
+                          nn.BatchNorm2d(fpn_dim),
+                          nn.ReLU(inplace=True))
+            for _ in range(len(fpn_inplanes) - 1)
+        ])
+
+        self.score_out = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(fpn_dim, fpn_dim, kernel_size=3, padding=1, bias=False),
+                nn.BatchNorm2d(fpn_dim),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(fpn_dim, num_class, 1),
+            ) for _ in range(len(fpn_inplanes))
+        ])
+
+        self.upscale = nn.ModuleList([
+            nn.ConvTranspose2d(fpn_dim, fpn_dim, kernel_size=4, stride=2, bias=False)
+            for _ in range(len(fpn_inplanes) - 1)
+        ])
+        
+        self.conv_last = nn.Sequential(
+            nn.Conv2d(len(fpn_inplanes) * fpn_dim, fpn_dim, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(fpn_dim),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(fpn_dim, num_class, kernel_size=1)
+        )
+        
+        if freeze_bn:
+            self.freeze_bn()
+
+    def forward(self, conv_out, segSize=None):
+        results = []
+        vit_input = conv_out[-1]
+        f = self.vit(vit_input)
+        
+        seg_res = self.score_out[-1](f)
+        results.append(seg_res)
+        
+        fpn_feature_list = [f]
+        for i in reversed(range(len(conv_out) - 1)):
+            conv_x = self.fpn_in[i](conv_out[i])
+            f = self.upscale[i](f) + conv_x
+            f_1 = self.fpn_out[i](f)
+            seg_res = F.upsample(seg_res, size=conv_x.size()[2:], mode='bilinear', align_corners=False)
+            seg_res = torch.sigmoid(seg_res)
+            seg_res = self.score_out[i](f_1)
+            results.append(seg_res)
+            fpn_feature_list.append(f_1)
+        
+        fpn_feature_list.reverse()
+        fusion_out = torch.cat([F.upsample(fpn, fpn_feature_list[0].size()[2:], mode='bilinear', align_corners=False)
+                                for fpn in fpn_feature_list], 1)
+        results.append(self.conv_last(fusion_out))
+        
+        return results
+
+    def freeze_bn(self):
+        for m in self.modules():
+            if isinstance(m, nn.BatchNorm2d):
+                m.eval()
 
 
 class FramePredEncoder(nn.Module):

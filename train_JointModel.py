@@ -15,13 +15,14 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import imageio
+import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
 from network.joint_pred_seg import STCNN,FramePredDecoder,FramePredEncoder,SegEncoder,JointSegDecoder
 from network.googlenet import Inception3
 
 from dataloaders import custom_transforms as tr
-from dataloaders import DAVIS_dataloader as db
+from dataloaders import FIRE_dataloader as db
 from mypath import Path
 
 
@@ -120,7 +121,11 @@ def main(args):
 	print("Training Network")
 	real_label = torch.ones(batch_size).float().to(device)
 	fake_label = torch.zeros(batch_size).float().to(device)
+
+	epoch_losses = []
 	for epoch in range(resume_epoch, nEpochs):
+		epoch_loss = 0
+		num_batches = len(trainloader)
 		start_time = timeit.default_timer()
 
 		for ii, sample_batched in enumerate(trainloader):
@@ -152,6 +157,8 @@ def main(args):
 			seg_loss.backward()
 			optimizer.step()
 			curr_iter += 1
+
+			epoch_loss += seg_loss.item() 
 			if updateD:
 				############################
 				# (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
@@ -221,6 +228,12 @@ def main(args):
 					os.makedirs(running_res_dir)
 				imageio.imwrite(os.path.join(running_res_dir, "train_fire%s_s.png" % (ii + num_img_tr * epoch)), np.uint8(samples1))
 				imageio.imwrite(os.path.join(running_res_dir, "train_fire%s_p.png" % (ii + num_img_tr * epoch)), np.uint8(samples2))
+		
+		avg_epoch_loss = epoch_loss / num_batches  # Compute average loss for the epoch
+		epoch_losses.append(avg_epoch_loss)  # Store epoch loss
+		print(f"Epoch [{epoch+1}/{nEpochs}] - Avg Loss: {avg_epoch_loss:.8f}")
+
+		
 		# Print stuff
 		print('[Epoch: %d, numImages: %5d]' % (epoch, (ii + 1)*batch_size))
 		stop_time = timeit.default_timer()
@@ -230,6 +243,16 @@ def main(args):
 		if (epoch % snapshot) == snapshot - 1 and epoch != 0:
 			torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_fire_epoch-' + str(epoch) + '.pth'))
 
+	plt.figure(figsize=(8, 5))
+	plt.plot(range(1, nEpochs + 1), epoch_losses, marker='o', linestyle='-', color='blue', label='Loss')
+	plt.xlabel("Epoch")
+	plt.ylabel("Loss")
+	plt.title("Loss vs Epoch Flame Training Full")
+	plt.legend()
+	plt.grid(True)
+
+	# Save the plot
+	plt.savefig("epoch_loss_flame_training_full.png", dpi=300, bbox_inches='tight')
 	writer.close()
 
 def inverse_transform(images):

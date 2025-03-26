@@ -15,6 +15,7 @@ import torchvision.models as models
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import imageio
+import matplotlib.pyplot as plt
 from dataloaders import FIRE_dataloader as db
 
 from network.joint_pred_seg import SegBranch, SegDecoder,SegEncoder
@@ -82,12 +83,15 @@ def main():
 		net.load_state_dict(torch.load("/home/r56x196/ondemand/data/sys/myjobs/projects/default/3/output/Seg_Branch/Seg_Branch_epoch-11999.pth", map_location=torch.device('cpu')))
 
 	curr_iter = 0
+	epoch_losses = []
 
 	for epoch in range(nEpochs):
+		epoch_loss = 0
+		num_batches = len(train_loader)
 		start_time = timeit.default_timer()
 		for ii, sample_batched in enumerate(train_loader):
-			optimizer.param_groups[0]['lr'] = 2 * lr*(1 - float(curr_iter) / (epoch + 1)) ** lr_decay
-			optimizer.param_groups[1]['lr'] = lr * (1 - float(curr_iter) / (epoch + 1)) ** lr_decay
+			optimizer.param_groups[0]['lr'] = 2 * lr * (lr_decay ** epoch)
+			optimizer.param_groups[1]['lr'] = lr * (lr_decay ** epoch)
 
 
 			inputs, gts = sample_batched['images'], sample_batched['gts']
@@ -103,6 +107,8 @@ def main():
 			loss.backward()
 			optimizer.step()
 			curr_iter += 1
+
+			epoch_loss += loss.item() 
 
 			if curr_iter % 5 == 0:
 				print(
@@ -136,12 +142,24 @@ def main():
 				if not os.path.exists(running_res_dir):
 					os.makedirs(running_res_dir)
 				imageio.imwrite(os.path.join(running_res_dir, "train_fire_seg_%s.png" % (curr_iter)), samples)
+		avg_epoch_loss = epoch_loss / num_batches  # Compute average loss for the epoch
+		epoch_losses.append(avg_epoch_loss)  # Store epoch loss
+		print(f"Epoch [{epoch+1}/{nEpochs}] - Avg Loss: {avg_epoch_loss:.8f}")
 
 		# Save the model
-			if (epoch % snapshot) == snapshot - 1:
-				torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only -' + str(curr_iter) + '.pth'))
-			if epoch == nEpochs:
-				return
+		if (epoch % snapshot) == snapshot - 1:
+			torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only -' + str(curr_iter) + '.pth'))
+		if epoch == nEpochs:
+			return
+	plt.figure(figsize=(8, 5))
+	plt.plot(range(1, nEpochs + 1), epoch_losses, marker='o', linestyle='-', color='blue', label='Loss')
+	plt.xlabel("Epoch")
+	plt.ylabel("Loss")
+	plt.title("Loss vs Epoch Flame Training No Temporal")
+	plt.legend()
+	plt.grid(True)
+
+	plt.savefig("epoch_loss_flame_training_notemporal.png", dpi=300, bbox_inches='tight')
 
 def initialize_SegEncoder(net):
     print("Loading weights from PyTorch ResNet101 (online)")

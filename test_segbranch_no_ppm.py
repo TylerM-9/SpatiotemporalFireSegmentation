@@ -2,10 +2,11 @@ import os
 import numpy as np
 import torch
 import imageio
+import cv2
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from dataloaders.FIRE_dataloader import FIREDatasetSegmentation
-from network.joint_pred_seg import SegBranch, SegDecoder, SegEncoder
+from network.joint_pred_seg import SegBranch, SegDecoderNoPPM, SegEncoder
 
 def dice_coefficient(y_true, y_pred, threshold=0.5):
     """Computes the Dice Coefficient for segmentation."""
@@ -31,7 +32,7 @@ def inverse_transform(images):
 def load_model(model_path, device):
     """Loads the segmentation model."""
     encoder = SegEncoder()
-    decoder = SegDecoder()
+    decoder = SegDecoderNoPPM()
     net = SegBranch(net_enc=encoder, net_dec=decoder).to(device)
     net.load_state_dict(torch.load(model_path, map_location=device))
     net.eval()
@@ -84,10 +85,9 @@ def main():
                                        target_transform=transforms.ToTensor())
     test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
     
-    model_path = "/home/r56x196/STCNN/output/Seg_Branch/Seg_Branch_epoch_fire_segmentation_only-{epochs}.pth"
+    model_path = "/home/r56x196/STCNN/output/Seg_Branch/Seg_Branch_epoch_fire_segmentation_only_noppm-11300.pth"
     model = load_model(model_path, device)
     evaluate_model(test_loader, model, device)
 
 if __name__ == "__main__":
     main()
-
