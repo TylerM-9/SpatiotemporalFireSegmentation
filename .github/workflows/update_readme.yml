@@ -1,0 +1,35 @@
+name: Update README from Notion
+
+on:
+  push:
+    branches:
+      - main  # Change this to your default branch
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: pip install requests
+
+      - name: Fetch Notion Data
+        run: python update_readme.py
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_KEY }}
+          NOTION_PAGE_ID: "1afad623120880b8b6bce3f9e8e3d59d"  # Replace with your actual Notion Page ID
+
+      - name: Commit and Push if Changed
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add README.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update README from Notion"
+          git push
