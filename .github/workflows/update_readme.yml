@@ -34,3 +34,6 @@ jobs:
           git add README.md
           git diff --quiet && git diff --staged --quiet || git commit -m "Update README from Notion"
           git push
+        env:
+          # Use a personal access token for pushing
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
