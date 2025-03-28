@@ -1,33 +1,27 @@
 import os
-import requests
+import zipfile
+from notion2md.exporter.block import MarkdownExporter
 
-NOTION_API_KEY = os.getenv("NOTION_KEY")
-NOTION_PAGE_ID = "1afad623120880b8b6bce3f9e8e3d59d"
-NOTION_URL = f"https://api.notion.com/v1/blocks/{NOTION_PAGE_ID}/children"
+# Define Notion Page ID and output paths
+NOTION_PAGE_ID = os.getenv("NOTION_PAGE_ID")
+EXTRACT_FOLDER = "notion_export"
 
-HEADERS = {
-    "Authorization": f"Bearer {NOTION_API_KEY}",
-    "Content-Type": "application/json",
-    "Notion-Version": "2022-06-28",
-}
+# Export Notion page as a Markdown ZIP file
+MarkdownExporter(block_id=NOTION_PAGE_ID, output_path='.', download=True).export()
 
-def fetch_notion_content():
-    response = requests.get(NOTION_URL, headers=HEADERS)
-    if response.status_code == 200:
-        data = response.json()
-        content = []
-        for block in data["results"]:
-            if block["type"] == "paragraph":
-                text = block["paragraph"]["rich_text"]
-                content.append(" ".join([t["text"]["content"] for t in text]))
-        return "\n".join(content)
-    else:
-        print("Failed to fetch Notion content:", response.text)
-        return ""
+# Unzip the file
+with zipfile.ZipFile(NOTION_PAGE_ID + ".zip", "r") as zip_ref:
+    zip_ref.extractall(EXTRACT_FOLDER)
 
-if __name__ == "__main__":
-    notion_content = fetch_notion_content()
-    if notion_content:
-        with open("README.md", "w", encoding="utf-8") as file:
-            file.write("# Updated from Notion\n\n")
-            file.write(notion_content)
+# Find the exported Markdown file
+for root, _, files in os.walk(EXTRACT_FOLDER):
+    for file in files:
+        if file.endswith(".md"):  # Find the first .md file
+            old_md_path = os.path.join(root, file)
+            new_md_path = os.path.join(root, "README.md")
+            os.rename(old_md_path, new_md_path)
+            print(f"Renamed {file} to README.md")
+            break  # Stop after renaming the first markdown file
+
+# Cleanup: Remove extracted folder and ZIP file
+os.remove(NOTION_PAGE_ID + ".zip")
