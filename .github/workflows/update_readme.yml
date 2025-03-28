@@ -6,39 +6,33 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: write  # Add this to explicitly grant write permissions
-
 jobs:
   update-readme:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
-      with:
-        # Use the default GITHUB_TOKEN
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-    - name: Install Dependencies
-      run: pip install requests
+      - name: Install Dependencies
+        run: pip install notion2md
 
-    - name: Fetch Notion Data
-      run: python update_readme.py
-      env:
-        NOTION_API_KEY: ${{ secrets.NOTION_KEY }}
-        NOTION_PAGE_ID: "1afad623120880b8b6bce3f9e8e3d59d"
+      - name: Fetch Notion Data as Markdown
+        run: python update_readme.py
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_KEY }}
+          NOTION_PAGE_ID: ${{ secrets.NOTION_PAGE_ID }}
 
-    - name: Commit and Push if Changed
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "github-actions@github.com"
-        git add README.md
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update README from Notion" && git push)
-      env:
-        # Use the default GITHUB_TOKEN
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit and Push if Changed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add README.md
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update README from Notion"
+          git push
