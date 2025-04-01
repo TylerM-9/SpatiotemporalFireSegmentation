@@ -40,42 +40,53 @@ def ConvBatchNormReLU(in_channels,out_channels,kernel_size=3,stride=1,padding=1,
 			nn.BatchNorm2d(out_channels),
 			)
 
-class SimpleAttentionBlock(nn.Module):
-    def __init__(self, in_channels=2048, out_channels=256, reduction_ratio=8):
-        super(SimpleAttentionBlock, self).__init__()
-        
-        # Compute reduced channels
-        reduced_channels = in_channels // reduction_ratio
-        
-        # Channel Attention Mechanism
-        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)  # Output: (batch, in_channels, 1, 1)
-        self.fc1 = nn.Linear(in_channels, reduced_channels)
-        self.fc2 = nn.Linear(reduced_channels, in_channels)
-        self.sigmoid = nn.Sigmoid()
-        
-        # Output projection
-        self.fc_out = nn.Linear(in_channels, out_channels)
-        
+class SAM(nn.Module):
+    def __init__(self, bias=False):
+        super(SAM, self).__init__()
+        self.bias = bias
+        self.conv = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=7, stride=1, padding=3, dilation=1, bias=self.bias)
+
     def forward(self, x):
-        batch, channels, _, _ = x.shape  # Input shape (batch, 2048, H, W)
+        max = torch.max(x,1)[0].unsqueeze(1)
+        avg = torch.mean(x,1).unsqueeze(1)
+        concat = torch.cat((max,avg), dim=1)
+        output = self.conv(concat)
+        output = F.sigmoid(output) * x 
+        return output 
+
+class CAM(nn.Module):
+    def __init__(self, channels, r):
+        super(CAM, self).__init__()
+        self.channels = channels
+        self.r = r
+        self.linear = nn.Sequential(
+            nn.Linear(in_features=self.channels, out_features=self.channels//self.r, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Linear(in_features=self.channels//self.r, out_features=self.channels, bias=True))
+
+    def forward(self, x):
+        max = F.adaptive_max_pool2d(x, output_size=1)
+        avg = F.adaptive_avg_pool2d(x, output_size=1)
+        b, c, _, _ = x.size()
+        linear_max = self.linear(max.view(b,c)).view(b, c, 1, 1)
+        linear_avg = self.linear(avg.view(b,c)).view(b, c, 1, 1)
+        output = linear_max + linear_avg
+        output = F.sigmoid(output) * x
+        return output
+    
+class CBAM(nn.Module):
+    def __init__(self, channels, r):
+        super(CBAM, self).__init__()
+        self.channels = channels
+        self.r = r
+        self.sam = SAM(bias=False)
+        self.cam = CAM(channels=self.channels, r=self.r)
+
+    def forward(self, x):
+        output = self.cam(x)
+        output = self.sam(output)
+        return output + x
         
-        # Global Average Pooling
-        pooled = self.global_avg_pool(x).view(batch, channels)  # Shape: (batch, 2048)
-        
-        # Attention Weights
-        attention = self.fc1(pooled)
-        attention = torch.relu(attention)
-        attention = self.fc2(attention)
-        attention = self.sigmoid(attention)  # Shape: (batch, 2048)
-        
-        # Reweight input
-        x = x * attention.view(batch, channels, 1, 1)  # Broadcast multiply
-        
-        # Reduce to 256 channels
-        x = x.mean(dim=(2, 3))  # Global Average Pooling over spatial dimensions
-        x = self.fc_out(x)  # Shape: (batch, 256)
-        
-        return x
 
 class RegionBottleneck(nn.Module):
 	def __init__(self, planes):
@@ -423,6 +434,58 @@ class SegDecoderNoPPM(SegDecoder):
         results.append(x)
 
         return results
+	
+class SegDecoderCBAM(SegDecoder):
+	def __init__(self, num_class=1, fc_dim=2048,
+					use_softmax=False, fpn_inplanes=(256, 512, 1024, 2048),
+					fpn_dim=256, freez_bn=True):
+		super(SegDecoderCBAM, self).__init__(
+			num_class=num_class, fc_dim=fc_dim, use_softmax=use_softmax,
+			fpn_inplanes=fpn_inplanes, fpn_dim=fpn_dim, freez_bn=freez_bn
+		)
+		
+		# Add 1x1 Conv to replace PPM and match FPN input size
+		self.reduce_channels = nn.Conv2d(fc_dim, fpn_dim, kernel_size=1, bias=False)
+		self.cbam = CBAM(2048, 4)
+
+	def forward(self, conv_out, segSize=None):
+		results = []
+		conv5 = conv_out[-1]  # (batch, 2048, 38, 38)\
+
+		cbam_refined_features = self.cbam(conv5)
+
+		f = self.reduce_channels(cbam_refined_features)  # Now (batch, 256, 38, 38)
+
+		seg_res = self.score_out[-1](f)
+		results.append(seg_res)
+
+		fpn_feature_list = [f]
+		for i in reversed(range(len(conv_out) - 1)):
+			conv_x = conv_out[i]
+			conv_x = self.fpn_in[i](conv_x)  # Lateral connection
+
+			f = crop_like(self.upscale[i](f), conv_x)  # Top-down connection
+			f = conv_x + f
+			f_1 = self.fpn_out[i](f)
+
+			seg_res = F.upsample(seg_res, size=conv_x.size()[2:], mode='bilinear', align_corners=False)
+			seg_res = torch.sigmoid(seg_res)
+			f_1 = self.att_out[i]([f_1, seg_res])
+			seg_res = self.score_out[i](f_1)
+			results.append(seg_res)
+
+			fpn_feature_list.append(f_1)
+
+		fpn_feature_list.reverse()
+		output_size = fpn_feature_list[0].size()[2:]
+		fusion_list = [fpn_feature_list[0]]
+		for i in range(1, len(fpn_feature_list)):
+			fusion_list.append(F.upsample(fpn_feature_list[i], output_size, mode='bilinear', align_corners=False))
+		fusion_out = torch.cat(fusion_list, 1)
+		x = self.conv_last(fusion_out)
+		results.append(x)
+
+		return results
 
 class ViTFeatureExtractor(nn.Module):
     def __init__(self, input_dim=2048, output_dim=256, img_size=16, out_size=38):
