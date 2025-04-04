@@ -34,7 +34,7 @@ def main(args):
 
 	# # Setting other parameters
 	resume_epoch = 100  # Default is 0, change if want to resume
-	nEpochs = 150  # Number of epochs for training (500.000/2079)
+	nEpochs = 200  # Number of epochs for training (500.000/2079)
 	batch_size = 1
 	snapshot = 1  # Store a model every snapshot epochs
 	pred_lr = 1e-8
@@ -111,10 +111,14 @@ def main(args):
 	# Training dataset and its iterator
 
 	# FIRE DATASET training
-	db_train = db.FIREDataset(inputRes=(400,710),transform=composed_transforms,num_frame=num_frame)
+	db_train = db.FIREDataset(inputRes=(400,710),transform=composed_transforms,mode="train", num_frame=num_frame)
 	#db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
 							   #transform=composed_transforms,num_frame=num_frame)
 	trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
+	test_set = db_train = db.FIREDataset(inputRes=(400,710),mode="test", num_frame=num_frame)
+	test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
+
+
 	num_img_tr = len(trainloader)
 	iter_num = nEpochs * num_img_tr
 	curr_iter = resume_epoch * num_img_tr
@@ -123,6 +127,8 @@ def main(args):
 	fake_label = torch.zeros(batch_size).float().to(device)
 
 	epoch_losses = []
+	val_loss_list = []
+	lp_loss = None 
 	for epoch in range(resume_epoch, nEpochs):
 		epoch_loss = 0
 		num_batches = len(trainloader)
@@ -191,7 +197,7 @@ def main(args):
 				updateD = True
 				updateG = True
 
-			if (ii + num_img_tr * epoch) % 5 == 4:
+			if (ii + num_img_tr * epoch) % 5 == 4 and lp_loss:
 				print(
 					"Iters: [%2d] time: %4.4f, lp_loss: %.8f, G_loss: %.8f,seg_loss: %.8f"
 					% (ii + num_img_tr * epoch, timeit.default_timer() - start_time, lp_loss.item(),errG.item(), seg_loss.item())
@@ -203,51 +209,37 @@ def main(args):
 				writer.add_scalar('data/G_loss_iter', errG.item(), ii + num_img_tr * epoch)
 				writer.add_scalar('data/seg_loss_iter', seg_loss.item(), ii + num_img_tr * epoch)
 
-			if (ii + num_img_tr * epoch) % 100 == 0:
-
-				seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
-				seg_pred = 1 / (1 + np.exp(-seg_pred))
-				gt_sample = gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])*255
-
-
-				seg_pred = seg_pred.transpose([1, 2, 0])*255
-				frame_sample = frames[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-				frame_sample = inverse_transform(frame_sample)*255
-				gt_sample3 = np.concatenate([gt_sample,gt_sample,gt_sample],axis=2)
-
-				seg_pred3 = np.concatenate([seg_pred,seg_pred,seg_pred],axis=2)
-				samples1 = np.concatenate((seg_pred3, gt_sample3, frame_sample), axis=0)
-
-				pred_sample = pred[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-				frame_sample = pred_gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-				samples2 = np.concatenate((pred_sample, frame_sample), axis=0)
-				samples2 = inverse_transform(samples2) * 255
-				print("Saving sample ...")
-				running_res_dir = os.path.join(save_dir, modelName+'_results')
-				if not os.path.exists(running_res_dir):
-					os.makedirs(running_res_dir)
-				imageio.imwrite(os.path.join(running_res_dir, "train_fire%s_s.png" % (ii + num_img_tr * epoch)), np.uint8(samples1))
-				imageio.imwrite(os.path.join(running_res_dir, "train_fire%s_p.png" % (ii + num_img_tr * epoch)), np.uint8(samples2))
 		
 		avg_epoch_loss = epoch_loss / num_batches  # Compute average loss for the epoch
 		epoch_losses.append(avg_epoch_loss)  # Store epoch loss
 		print(f"Epoch [{epoch+1}/{nEpochs}] - Avg Loss: {avg_epoch_loss:.8f}")
 
+		val_loss = 0
+		for idx, sample in enumerate(test_loader):
+			seqs, frames, gts, pred_gts = sample['images'], sample['frame'],sample['seg_gt'], \
+										 sample['pred_gt']
+
+			seqs, frames, gts, pred_gts = seqs.to(device), frames.to(device), gts.to(device),pred_gts.to(device)
+			seg_res, pred = net.forward(seqs, frames)
+			
+			seg_loss = seg_criterion(seg_res[-1], gts)
+			for i in reversed(range(len(seg_res) - 1)):
+				seg_loss = seg_loss + (1 - curr_iter / iter_num) * seg_criterion(seg_res[i],gts)
+
+			val_loss += seg_loss.item() 
 		
-		# Print stuff
-		print('[Epoch: %d, numImages: %5d]' % (epoch, (ii + 1)*batch_size))
-		stop_time = timeit.default_timer()
-		print("Execution time: " + str(stop_time - start_time))
-		# Save the model
+		num_samples = len(test_loader)
+		val_loss_list.append(val_loss/num_samples)
 		
 		if (epoch % snapshot) == snapshot - 1 and epoch != 0:
 			torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_fire_epoch-' + str(epoch) + '.pth'))
 
-	plt.figure(figsize=(8, 5))
-	plt.plot(range(1, nEpochs + 1), epoch_losses, marker='o', linestyle='-', color='blue', label='Loss')
-	plt.xlabel("Epoch")
-	plt.ylabel("Loss")
-	plt.title("Loss vs Epoch Flame Training Full")
+	plt.figure(figsize=(8, 6))  # Set figure size (optional)
+	plt.plot(range(1, nEpochs - 99), epoch_losses, marker='o', linestyle='-', label="Training Loss")
+	plt.plot(range(1, nEpochs - 99), val_loss_list, marker='s', linestyle='--', label="Validation Loss", color='r')
+	plt.xlabel("Epochs")
+	plt.ylabel("Average Loss")
+	plt.title("Training & Validation Loss Over Epochs Full Model")
 	plt.legend()
 	plt.grid(True)
 

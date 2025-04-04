@@ -31,9 +31,9 @@ if torch.cuda.is_available():
 
 # # Setting other parameters
 last_iter = 12000  # Default is 0, change if want to resume
-nEpochs = 50
+nEpochs = 150
 batch_size = 8
-snapshot = 100  # Store a model every snapshot epochs
+snapshot = 1  # Store a model every snapshot epochs
 lr = 1e-3
 wd = 5e-4
 lr_decay = 0.9
@@ -66,6 +66,13 @@ def main():
     train_loader = DataLoader(train_set, batch_size=batch_size, num_workers=4, shuffle=True)
     criterion = nn.BCEWithLogitsLoss().to(device)
 
+    test_set = db.FIREDatasetSegmentation(inputRes=(400, 710),
+                                       image_path="/home/r56x196/Data/Mask_Data/Images/test",
+                                       mask_path="/home/r56x196/Data/Mask_Data/Masks/test",
+                                       transform=transforms.ToTensor(),
+                                       target_transform=transforms.ToTensor())
+    test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
+
 
     encoder = SegEncoder()
 
@@ -83,6 +90,7 @@ def main():
     curr_iter = 0
 
     epoch_losses = []
+    val_loss_list = []
 
     for epoch in range(nEpochs):
         epoch_loss = 0
@@ -146,14 +154,31 @@ def main():
         epoch_losses.append(avg_epoch_loss)  # Store epoch loss
         print(f"Epoch [{epoch+1}/{nEpochs}] - Avg Loss: {avg_epoch_loss:.8f}")
 
+        val_loss = 0
+        for idx, sample in enumerate(test_loader):
+            inputs, gts = sample['images'].to(device), sample['gts'].to(device)
+            pred = net(inputs)
+            
 
-        # Save the model
-        if (epoch % snapshot) == snapshot - 1:
-            torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only_cbam-' + str(curr_iter) + '.pth'))
+            loss = criterion(pred[-1], gts)
+            val_loss += loss.item() 
+        
+        num_samples = len(test_loader)
+        val_loss_list.append(val_loss/num_samples)
+        
+        torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only_cbam-' + str(curr_iter) + '.pth'))
         if epoch == nEpochs:
             return
 
-
+        # After training loop, before saving the figure
+    plt.figure(figsize=(8, 6))  # Set figure size (optional)
+    plt.plot(range(1, nEpochs + 1), epoch_losses, marker='o', linestyle='-', label="Training Loss")
+    plt.plot(range(1, nEpochs + 1), val_loss_list, marker='s', linestyle='--', label="Validation Loss", color='r')
+    plt.xlabel("Epochs")
+    plt.ylabel("Average Loss")
+    plt.title("Training & Validation Loss Over Epochs")
+    plt.legend()
+    plt.grid(True)
     # Save the plot
     plt.savefig("epoch_loss_flame_training_cbam.png", dpi=300, bbox_inches='tight')
 
