@@ -16,7 +16,8 @@ from tensorboardX import SummaryWriter
 import imageio
 import matplotlib.pyplot as plt
 
-from network.joint_pred_seg import SegBranch, SegEncoder, SegDecoderCBAM
+from network.joint_pred_seg import SegBranch, SegEncoder, SegDecoder
+from network.MV2_try import SegEncoder_MobileViT2_Compat
 from dataloaders import joint_transforms, voc_msra_dataloader as db
 from mypath import Path
 
@@ -83,9 +84,14 @@ class Trainer:
         return joint_transform, img_transform, target_transform
 
     def _initialize_network(self):
-        encoder = SegEncoder()
-        self._initialize_encoder(encoder)
-        decoder = SegDecoderCBAM()
+        # Swap in MobileViT-v2 encoder; keep your decoder exactly as-is
+        encoder = SegEncoder_MobileViT2_Compat(
+            mv2_variant="mobilevitv2_100",   # or _075, _150, etc.
+            pretrained=True,                 # ImageNet-pretrained via timm
+            out_indices=(1, 2, 3, 4),        # 4 scales (≈ strides 4/8/16/32)
+            target_planes=(256, 512, 1024, 2048)  # match SegDecoderCBAM's expectations
+        )
+        decoder = SegDecoder()
         return SegBranch(net_enc=encoder, net_dec=decoder)
 
     def _initialize_encoder(self, net: SegEncoder):

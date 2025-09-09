@@ -152,21 +152,21 @@ def main(args):
 		num_batches = len(trainloader)
 		start_time = timeit.default_timer()
 
-			for ii, sample_batched in enumerate(train_loader):
+		for ii, sample_batched in enumerate(train_loader):
 
-				seqs, frames, gts, pred_gts = sample_batched['images'], sample_batched['frame'],sample_batched['seg_gt'], \
-											sample_batched['pred_gt']
+			seqs, frames, gts, pred_gts = sample_batched['images'], sample_batched['frame'],sample_batched['seg_gt'], \
+										sample_batched['pred_gt']
 
-				# Forward-Backward of the mini-batch
-				seqs.requires_grad_()
-				frames.requires_grad_()
+			# Forward-Backward of the mini-batch
+			seqs.requires_grad_()
+			frames.requires_grad_()
 
-				seqs, frames, gts, pred_gts = seqs.to(device), frames.to(device), gts.to(device),pred_gts.to(device)
+			seqs, frames, gts, pred_gts = seqs.to(device), frames.to(device), gts.to(device),pred_gts.to(device)
 
-				pred_gts = F.upsample(pred_gts, size=(100, 178), mode='bilinear', align_corners=False)
+			pred_gts = F.upsample(pred_gts, size=(100, 178), mode='bilinear', align_corners=False)
 
-				pred_gts = pred_gts.detach()
-				seg_res, pred = net.forward(seqs, frames)
+			pred_gts = pred_gts.detach()
+			seg_res, pred = net.forward(seqs, frames)
 
 			D_real_input = F.interpolate(pred_gts, size=(75, 75), mode='bilinear', align_corners=False)
 			D_fake_input = F.interpolate(pred.detach(), size=(75, 75), mode='bilinear', align_corners=False)
@@ -181,10 +181,10 @@ def main(args):
 			errD_real = criterion(D_real, real_label)
 			errD_fake = criterion(D_fake, fake_label)
 
-				optimizer.zero_grad()
-				seg_loss = seg_criterion(seg_res[-1], gts)
-				for i in reversed(range(len(seg_res) - 1)):
-					seg_loss = seg_loss + (1 - curr_iter / iter_num) * seg_criterion(seg_res[i],gts)
+			optimizer.zero_grad()
+			seg_loss = seg_criterion(seg_res[-1], gts)
+			for i in reversed(range(len(seg_res) - 1)):
+				seg_loss = seg_loss + (1 - curr_iter / iter_num) * seg_criterion(seg_res[i],gts)
 
 			seg_loss.backward()
 			optimizer.step()

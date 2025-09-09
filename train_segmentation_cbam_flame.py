@@ -2,49 +2,72 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+# Standard library imports
 import os
 from datetime import datetime
 import socket
 import timeit
-from tensorboardX import SummaryWriter
+
+# Third-party imports
 import numpy as np
+import matplotlib.pyplot as plt
+import imageio
+from tensorboardX import SummaryWriter
+
+# PyTorch imports
 import torch
 import torch.optim as optim
+import torch.nn as nn
 from torchvision import transforms
 import torchvision.models as models
 from torch.utils.data import DataLoader
-import torch.nn as nn
-import imageio
-import matplotlib.pyplot as plt
+
+# Local imports
 from dataloaders import FIRE_dataloader as db
-
-from network.joint_pred_seg import SegBranch, SegDecoder,SegEncoder, SegDecoderCBAM
 from dataloaders import joint_transforms
-
+from network.joint_pred_seg import (
+    SegBranch,
+    SegDecoder,
+    SegEncoder,
+    SegDecoderCBAM
+)
 from mypath import Path
 
-# # Select which GPU, -1 if CPU
+# GPU configuration
 gpu_id = 0
-device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
+device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")
 if torch.cuda.is_available():
-	print('Using GPU: {} '.format(gpu_id))
+    print(f'Using GPU: {gpu_id}')
 
-# # Setting other parameters
-last_iter = 12000  # Default is 0, change if want to resume
-nEpochs = 150
-batch_size = 8
-snapshot = 1  # Store a model every snapshot epochs
-lr = 1e-3
-wd = 5e-4
-lr_decay = 0.9
-sidWeight = 0.5
-modelName = 'Seg_Branch_CBAM'
+# Training parameters
+TRAINING_PARAMS = {
+    'last_iter': 12000,  # Default 0, change if resuming
+    'num_epochs': 150,
+    'batch_size': 8,
+    'snapshot': 1,  # Store model every snapshot epochs
+    'learning_rate': 1e-3,
+    'weight_decay': 5e-4,
+    'lr_decay': 0.9,
+    'side_weight': 0.5
+}
 
+# Model configuration
+MODEL_NAME = 'Seg_Branch_CBAM'
+modelName = MODEL_NAME  # Define modelName from MODEL_NAME
+
+# Training variables from TRAINING_PARAMS
+lr = TRAINING_PARAMS['learning_rate']
+lr_decay = TRAINING_PARAMS['lr_decay']
+wd = TRAINING_PARAMS['weight_decay']
+batch_size = TRAINING_PARAMS['batch_size']
+nEpochs = TRAINING_PARAMS['num_epochs']
+
+# Setup save directory
 save_dir = Path.save_root_dir()
 if not os.path.exists(save_dir):
-	os.makedirs(os.path.join(save_dir))
+    os.makedirs(os.path.join(save_dir))
 
-save_model_dir = os.path.join(save_dir,modelName)
+save_model_dir = os.path.join(save_dir, modelName)
 if not os.path.exists(save_model_dir):
 	os.makedirs(os.path.join(save_model_dir))
 log_dir = os.path.join(save_dir, 'SegBranch_runs', datetime.now().strftime('%b%d_%H-%M-%S') + '_' + socket.gethostname())
