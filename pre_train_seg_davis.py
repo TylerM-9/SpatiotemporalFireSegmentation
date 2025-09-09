@@ -65,7 +65,7 @@ def main():
 
     encoder = SegEncoder()
 
-    decoder = SegDecoderNoPPM()
+    decoder = SegDecoder()
     net = SegBranch(net_enc=encoder,net_dec=decoder)
     net.to(device)
     optimizer = optim.SGD([
@@ -74,7 +74,8 @@ def main():
         ], momentum=0.9)
 
 
-    net.load_state_dict(torch.load("/home/r56x196/STCNN/output/Seg_Branch_NoAttention/Seg_Branch_NoAttention_epoch-11999.pth", map_location=torch.device('cpu')))
+    net.load_state_dict(torch.load(os.path.join('/home/r56x196/ondemand/data/sys/myjobs/projects/default/2/output/Seg_Branch','Seg_Branch_epoch-11999.pth'), map_location=torch.device('cpu')))
+    
 
     curr_iter = 0
 
@@ -115,36 +116,12 @@ def main():
             if curr_iter % 10 == 0:
                 writer.add_scalar('data/loss_iter', loss.item(), curr_iter)
 
-            if curr_iter % 1000 == 1:
-
-                inputs = inputs[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-                inputs = (inputs - inputs.min()) / max((inputs.max() - inputs.min()), 1e-8) * 255
-
-                gt = gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])*255
-                gt = np.concatenate([gt, gt, gt], axis=2)
-
-                samples = pred[-1][0, :, :, :].data.cpu().numpy()
-                samples = 1 / (1 + np.exp(-samples))
-                samples = samples.transpose([1, 2, 0]) * 255
-                samples = np.concatenate([samples, samples, samples], axis=2)
-
-                samples = np.concatenate((samples, gt, inputs), axis=0)
-
-                samples = np.clip(samples, 0, 255).astype(np.uint8)
-
-                print("Saving sample ...")
-                # samples = inverse_transform(samples)*255
-                running_res_dir = os.path.join(save_dir, modelName+'_results')
-                if not os.path.exists(running_res_dir):
-                    os.makedirs(running_res_dir)
-                imageio.imwrite(os.path.join(running_res_dir, "train_seg_noppm_davis%s.png" % (curr_iter)), samples)
-
         avg_epoch_loss = epoch_loss / num_batches  # Compute average loss for the epoch
         epoch_losses.append(avg_epoch_loss)  # Store epoch loss
         print(f"Epoch [{epoch+1}/{nEpochs}] - Avg Loss: {avg_epoch_loss:.8f}")
 
         if (epoch % snapshot) == snapshot - 1:
-            torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only_noppm-' + str(curr_iter) + '.pth'))
+            torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only_redo-' + str(curr_iter) + '.pth'))
         if epoch == nEpochs:
             return
 
@@ -154,11 +131,11 @@ def main():
     plt.plot(range(1, nEpochs + 1), epoch_losses, marker='o', linestyle='-', label="Training Loss")
     plt.xlabel("Epochs")
     plt.ylabel("Average Loss")
-    plt.title("Training & Validation Loss Over Epochs DAVIS")
+    plt.title("Training & Validation Loss Over Epochs DAVIS Segmentation Only")
     plt.legend()
     plt.grid(True)
     # Save the plot
-    plt.savefig("epoch_loss_flame_training_davis_no_ppm.png", dpi=300, bbox_inches='tight')
+    plt.savefig("epoch_loss_flame_training_redo.png", dpi=300, bbox_inches='tight')
 
 if __name__ == "__main__":
 	main()

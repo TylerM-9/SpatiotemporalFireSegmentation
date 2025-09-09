@@ -114,32 +114,6 @@ def main():
                     % (curr_iter, timeit.default_timer() - start_time, loss.item())
                 )
 
-            if curr_iter % 10 == 0:
-                writer.add_scalar('data/loss_iter', loss.item(), curr_iter)
-
-            if curr_iter % 100 == 1:
-
-                inputs = inputs[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-                inputs = (inputs - inputs.min()) / max((inputs.max() - inputs.min()), 1e-8) * 255
-
-                gt = gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])*255
-                gt = np.concatenate([gt, gt, gt], axis=2)
-
-                samples = pred[-1][0, :, :, :].data.cpu().numpy()
-                samples = 1 / (1 + np.exp(-samples))
-                samples = samples.transpose([1, 2, 0]) * 255
-                samples = np.concatenate([samples, samples, samples], axis=2)
-
-                samples = np.concatenate((samples, gt, inputs), axis=0)
-
-                samples = np.clip(samples, 0, 255).astype(np.uint8)
-
-                print("Saving sample ...")
-                running_res_dir = os.path.join(save_dir, modelName+'_results')
-                if not os.path.exists(running_res_dir):
-                    os.makedirs(running_res_dir)
-                imageio.imwrite(os.path.join(running_res_dir, "train_%s.png" % (curr_iter)), samples)
-
             # Save the model
             if (curr_iter % snapshot) == snapshot - 1:
                 torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch-' + str(curr_iter) + '.pth'))

@@ -79,8 +79,28 @@ def main():
 		], momentum=0.9)
 
 	if last_iter > 0:
-		print ('training resumes from ' + str(last_iter))
-		net.load_state_dict(torch.load("/home/r56x196/ondemand/data/sys/myjobs/projects/default/3/output/Seg_Branch/Seg_Branch_epoch-11999.pth", map_location=torch.device('cpu')))
+		print('Training resumes from ' + str(last_iter))
+
+		# Load checkpoint
+		checkpoint = torch.load(
+			"/home/r56x196/ondemand/data/sys/myjobs/projects/default/3/output/Seg_Branch/Seg_Branch_epoch-11999.pth",
+			map_location=torch.device('cpu')
+		)
+
+		# Load with strict=False to allow partial loading
+		missing_keys, unexpected_keys = net.load_state_dict(checkpoint, strict=False)
+
+		# Print mismatch info
+		if missing_keys:
+			print("\n== Missing keys in model (not found in checkpoint):")
+			for k in missing_keys:
+				print("  ", k)
+		if unexpected_keys:
+			print("\n== Unexpected keys in checkpoint (not used in model):")
+			for k in unexpected_keys:
+				print("  ", k)
+		if not missing_keys and not unexpected_keys:
+			print("\n✅ All keys matched successfully!")
 
 	curr_iter = 0
 	epoch_losses = []

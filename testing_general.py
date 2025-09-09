@@ -1,6 +1,5 @@
 
-from network.joint_pred_seg import STCNN,FramePredDecoder,FramePredEncoder,JointSegDecoder
-from network.joint_pred_seg import SegBranch, SegDecoder,SegEncoder
+from network.joint_pred_seg import STCNN,FramePredDecoder,FramePredEncoder,SegEncoder,JointSegDecoder, JointSegDecoderNoPPM
 import numpy as np
 import os
 from mypath import Path
@@ -12,7 +11,6 @@ from dataloaders import custom_transforms as tr
 from torch.utils.data import DataLoader, ConcatDataset
 
 def main(frame, epochs):
-    gpu_id = 0
     num_frame = frame
     num_epochs = epochs
     modelName = 'STCNN_frame_'+str(num_frame)
@@ -24,13 +22,17 @@ def main(frame, epochs):
     save_model_dir = os.path.join(save_dir, modelName)
 
     seg_enc = SegEncoder()
-    seg_dec = SegDecoder()
+    pred_enc = FramePredEncoder(frame_nums=num_frame)
+    pred_dec = FramePredDecoder()
+    j_seg_dec = JointSegDecoderNoPPM()
 
-    net = SegBranch(net_enc=seg_enc,net_dec=seg_dec)
-    print("Updationg weights from pretrained")
+    net = STCNN(pred_enc, seg_enc, pred_dec, j_seg_dec)
     net.load_state_dict(
-        torch.load("/home/r56x196/STCNN/output/STCNN_frame_segmentation_only_full4/STCNN_frame_segmentation_only_full4Flame-100.pth",
-                map_location=lambda storage, loc: storage))
+            torch.load("/home/r56x196/STCNN/output/STCNN_frame_NoPPM4/STCNN_frame_NoPPM4FLAME_NoPPM-199.pth",map_location=device))
+
+    net = net.to(device)
+    net.eval() 
+
 
     available_splits = 17
     general_test_set = []
@@ -40,26 +42,27 @@ def main(frame, epochs):
 
     test_set = ConcatDataset(general_test_set)
     test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=False)
-    # test_set = db.FIREDataset(inputRes=(400,710),mode="test", num_frame=4)
-    # test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=False)
+
+    """
+    test_set = db.FIREDataset(inputRes=(400,710),mode="test", num_frame=num_frame)
+    test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=False)
 
     num_img_test = len(test_loader)
-
-    net.to(device)
+    """
 
     iou = 0
     iou_mean = 0
     pa = 0
     dice = 0
     for ii, sample_batched in enumerate(test_loader):
-        seqs, frame, gts, pred_gts = (
+        seqs, frames, gts, pred_gts = (
             sample_batched['images'].to(device), 
             sample_batched['frame'].to(device),
             sample_batched['seg_gt'].to(device),
             sample_batched['pred_gt'].to(device)
         ) 
 
-        seg_res = net(frame)
+        seg_res, pred = net(seqs, frames)
 
         seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
         seg_pred = 1 / (1 + np.exp(-seg_pred))
@@ -84,7 +87,7 @@ def main(frame, epochs):
 
             seg_pred3 = np.concatenate([seg_pred,seg_pred,seg_pred],axis=2)
             samples1 = np.concatenate((seg_pred3,frame_sample), axis=0)
-            imageio.imwrite(os.path.join("test_fire_general_%s_s.png" % ii), np.uint8(samples1))
+            imageio.imwrite(os.path.join("test_fire_FLAME_NoPPM_%s_s.png" % ii), np.uint8(samples1))
 
     print("FINAL IoU: ", iou/num_img_test)
     print("FINAL Pixel Accuracy: ", pa/num_img_test)
@@ -169,5 +172,4 @@ def dice_coefficient(y_true, y_pred, threshold=0.5):
     intersection = np.logical_and(adj_y_true, y_pred_bin).sum()
     return (2. * intersection) / (adj_y_true.sum() + y_pred_bin.sum() + 1e-8)
 
-
-main(1, 149)
+main(4, 149)

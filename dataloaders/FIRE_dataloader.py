@@ -18,13 +18,15 @@ class FIREDatasetGeneral(Dataset):
 	def __init__(self,
 				inputRes=None,
 				image_path="/home/r56x196/Data/archive-2/Image/Merged",
-				mask_path="/home/r56x196/Data/archive-2/Merged/Fire",
+				mask_path="/home/r56x196/Data/archive-2/Mask/Fire",
 				transform=None,
 				num_frame=4):
 		self.transform = transform
 		self.inputRes = inputRes
 		self.toTensor = tr.ToTensor()
 		self.num_frame = num_frame
+
+		self.split = image_path[-1]
 
 		image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
 
@@ -75,6 +77,8 @@ class FIREDatasetGeneral(Dataset):
 			gt = cv2.resize(gt, (self.inputRes[1], self.inputRes[0]), 
 						interpolation=cv2.INTER_NEAREST)
 			frame = cv2.resize(frame, (self.inputRes[1], self.inputRes[0]))
+
+		print("split: ", self.split)
 		img = np.concatenate(img,axis=2)
 
 		img = np.array(img, dtype=np.float32)
@@ -118,7 +122,6 @@ class FIREDatasetSingle(Dataset):
 		self.transform = transform
 		self.inputRes = inputRes
 		self.toTensor = tr.ToTensor()
-		self.num_frame = num_frame
 
 		image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
 

@@ -1,6 +1,8 @@
 from typing import List, Tuple, Dict, Optional
 from network.joint_pred_seg import STCNN,FramePredDecoder,FramePredEncoder,SegEncoder,JointSegDecoder, SegBranch,SegEncoder
 from network.googlenet import Inception3
+from dataloaders import joint_transforms
+
 
 
 class SegmentationBottleneck():
@@ -103,6 +105,45 @@ class JointDataset(Dataset):
 
         return self.toTensor(sample)
 
+class SegmentationDataset(Dataset):
+
+
+class voc_msra_dataloadr(SegmentationDataset):
+	# image and gt should be in the same folder and have same filename except extended name (jpg and png respectively)
+	def __init__(self, msra_root,voc_root):
+
+		self.imgs_msra = make_msra_dataset(msra_root)
+		self.imgs_voc = make_voc_dataset('train',voc_root)
+		self.imgs = []
+		self.imgs.extend(self.imgs_msra)
+		self.imgs.extend(self.imgs_voc)
+		self.msra_num = len(self.imgs_msra)
+
+	def __getitem__(self, index):
+		img_path, gt_path = self.imgs[index]
+		img = Image.open(img_path).convert('RGB')
+		target = Image.open(gt_path).convert('L')
+
+		joint_transform = joint_transforms.Compose([
+            joint_transforms.RandomCrop(300),
+            joint_transforms.RandomHorizontallyFlip(),
+            joint_transforms.RandomRotate(10)
+        ])
+        img_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        ])
+	    target_transform = transforms.ToTensor()
+
+		img, target = self.joint_transform(img, target)
+		img = self.transform(img)
+		target = self.target_transform(target)
+		target = target.numpy()
+		sample = {'image':img, 'gts': target}
+		return sample
+
+	def __len__(self):
+		return len(self.imgs)
 
 class ModelConstractor:
     """Model Constractor class used for easy training and testing of STCNN model with different modules and datasets"""
@@ -149,10 +190,11 @@ class ModelConstractor:
         )
 
         self.joint_datasets = joint_datasets
+        self.seg_datasets = seg_datasets
     
 
     def _get_dataloaders(
-        joint_datasets: Optional[List[JointDataset]],
+        datasets: Optional[List[Dataset]],
         batch_size: int,
         num_workers: int = 4
         ) -> List[DataLoader]:
@@ -160,7 +202,7 @@ class ModelConstractor:
         Returns a list of DataLoader instances for the given joint datasets.
 
         Args:
-            joint_datasets (Optional[List[JointDataset]]): A list of JointDataset instances for which 
+            joint_datasets (Optional[List[Dataset]]): A list of Dataset instances for which 
                 DataLoaders need to be created. If no datasets are provided, an empty list is returned.
             batch_size (int): The batch size to be used for each DataLoader.
             num_workers (int, optional): The number of subprocesses to use for data loading. Default is 4.
@@ -171,8 +213,8 @@ class ModelConstractor:
         dataloaders = []
         
         # If joint_datasets is not empty, create a DataLoader for each dataset
-        if joint_datasets:
-            for dataset in joint_datasets:
+        if datasets:
+            for dataset in datasets:
                 dataloaders.append(
                     DataLoader(
                         dataset,
@@ -213,12 +255,12 @@ class ModelConstractor:
 
                 for ii, sample_batched in enumerate(dataloader):
 
-                            sample: Dict[str, Any] = {
+                    sample: Dict[str, Any] = {
                     'frames': frame,
                     'last_frame': last_frame_normalized,
                     'seg_gt': temp_gt,
                     'temp_gt': temp_gt_normalized
-                }
+                    }
 
                     frames, last_frame, temp_gt, seg_gt = sample_batched["frames"], sample_batched["last_frame"], sample_batched["temp_gt"], sample_batched["seg_gt"]
 
@@ -295,6 +337,29 @@ class ModelConstractor:
         # Save the figure instead of displaying it
         plt.savefig('training_loss_curve.png')  # Save as PNG (can also use .pdf, .jpg, etc.)
         plt.close()  # Close the plot after saving to free memory
+
+
+    def _train_segmentation(
+        epochs: int,
+        batch_size: int,
+        model_name: str,
+        snapshot: int = 10
+        ) -> None:
+
+        dataloaders = self._get_dataloaders(
+            joint_datasets=self.seg_datasets,
+            batch_size=batch_size
+        )
+
+        optimizer = optim.SGD([
+		{'params': [param for name, param in net.named_parameters() if name[-4:] == 'bias'],'lr': 2 * lr},
+		{'params': [param for name, param in net.named_parameters() if name[-4:] != 'bias'],'lr': lr, 'weight_decay': wd}
+		], momentum=0.9)
+
+        loss_values = []
+
+
+
 
 
 

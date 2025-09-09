@@ -1,4 +1,9 @@
-from __future__ import absolute_import
+        sample: Dict[str, Any] = {
+            'frames': frame,
+            'last_frame': last_frame_normalized,
+            'seg_gt': temp_gt,
+            'temp_gt': temp_gt_normalized
+        }from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 

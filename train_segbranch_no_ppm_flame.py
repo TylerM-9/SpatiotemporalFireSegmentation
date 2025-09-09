@@ -31,7 +31,7 @@ if torch.cuda.is_available():
 
 # # Setting other parameters
 last_iter = 12000  # Default is 0, change if want to resume
-nEpochs = 50
+nEpochs = 100
 batch_size = 8
 snapshot = 10  # Store a model every snapshot epochs
 lr = 1e-3
@@ -67,9 +67,17 @@ def main():
     criterion = nn.BCEWithLogitsLoss().to(device)
 
 
+    test_set = db.FIREDatasetSegmentation(inputRes=(400, 710),
+                                    image_path="/home/r56x196/Data/Mask_Data/Images/test",
+                                    mask_path="/home/r56x196/Data/Mask_Data/Masks/test",
+                                    transform=transforms.ToTensor(),
+                                    target_transform=transforms.ToTensor())
+    test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
+
+
     encoder = SegEncoder()
 
-    decoder = SegDecoderNoPPM()
+    decoder = SegDecoder()
     net = SegBranch(net_enc=encoder,net_dec=decoder)
     net.to(device)
     optimizer = optim.SGD([
@@ -78,12 +86,12 @@ def main():
         ], momentum=0.9)
 
 
-    net.load_state_dict(torch.load("/home/r56x196/STCNN/output/Seg_Branch_NoAttention/Seg_Branch_NoAttention_epoch-11999.pth", map_location=torch.device('cpu')))
+    net.load_state_dict(torch.load("/home/r56x196/STCNN/output/Seg_Branch_DAVIS/Seg_Branch_DAVIS_epoch_fire_segmentation_only_redo-50100.pth", map_location=torch.device('cpu')))
 
     curr_iter = 0
 
     epoch_losses = []
-
+    val_loss_list = []
     for epoch in range(nEpochs):
         epoch_loss = 0
         num_batches = len(train_loader)
@@ -118,7 +126,7 @@ def main():
             if curr_iter % 10 == 0:
                 writer.add_scalar('data/loss_iter', loss.item(), curr_iter)
 
-            if curr_iter % 50 == 1:
+            if curr_iter % 100 == 1:
 
                 inputs = inputs[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
                 inputs = (inputs - inputs.min()) / max((inputs.max() - inputs.min()), 1e-8) * 255
@@ -146,16 +154,32 @@ def main():
         epoch_losses.append(avg_epoch_loss)  # Store epoch loss
         print(f"Epoch [{epoch+1}/{nEpochs}] - Avg Loss: {avg_epoch_loss:.8f}")
 
+        val_loss = 0
+        for idx, sample in enumerate(test_loader):
+            inputs, gts = sample['images'].to(device), sample['gts'].to(device)
+            pred = net(inputs)
+            
+            loss = criterion(pred[-1], gts)
+            val_loss += loss.item() 
+        
+        num_samples = len(test_loader)
+        val_loss_list.append(val_loss/num_samples)
 
         # Save the model
         if (epoch % snapshot) == snapshot - 1:
-            torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only_noppm-' + str(curr_iter) + '.pth'))
-        if epoch == nEpochs:
-            return
+            torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only_davis-' + str(curr_iter) + '.pth'))
 
 
+    plt.figure(figsize=(8, 6))  # Set figure size (optional)
+    plt.plot(range(1, nEpochs + 1), epoch_losses, marker='o', linestyle='-', label="Training Loss")
+    plt.plot(range(1, nEpochs + 1), val_loss_list, marker='s', linestyle='--', label="Validation Loss", color='r')
+    plt.xlabel("Epochs")
+    plt.ylabel("Average Loss")
+    plt.title("Training & Validation Loss Over Epochs Reuse Davis")
+    plt.legend()
+    plt.grid(True)
     # Save the plot
-    plt.savefig("epoch_loss_flame_training_noppm.png", dpi=300, bbox_inches='tight')
+    plt.savefig("epoch_loss_flame_training DAVIS.png", dpi=300, bbox_inches='tight')
 
 if __name__ == "__main__":
 	main()
