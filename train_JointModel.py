@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from ResT.models.rest import *
 import argparse
 import os
 from datetime import datetime
@@ -15,29 +16,35 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import imageio
+import matplotlib.pyplot as plt
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Subset
 from sklearn.model_selection import KFold
 
 from sklearn.metrics import roc_auc_score, f1_score
 
-from network.joint_pred_seg import STCNN,FramePredDecoder,FramePredEncoder,SegEncoder,JointSegDecoder
+from network.joint_pred_seg import STCNN,FramePredDecoder,JointSegDecoderREST,FramePredEncoder,SegEncoder,JointSegDecoder, SegBranch
 from network.googlenet import Inception3
 
+from network.shuffle import PretrainedShuffleEncoder
+
 from dataloaders import custom_transforms as tr
-from dataloaders import DAVIS_dataloader as db
+#from dataloaders import DAVIS_dataloader as db
+from dataloaders import FIRE_dataloader as db
 from mypath import Path
 
-
-
+gpu_id = 0
+device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
 def main(args):
 	# # Select which GPU, -1 if CPU
-	gpu_id = 0
-	device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
+	if torch.cuda.is_available():
+		print(f"CUDA available, using GPU {gpu_id}: {torch.cuda.get_device_name(gpu_id)}")
+	else:
+		print("CUDA not available, using CPU.")
 
 	# # Setting other parameters
-	resume_epoch = 12  # Default is 0, change if want to resume
-	nEpochs = 100  # Number of epochs for training (500.000/2079)
+	resume_epoch = 1 # Default is 0, change if want to resume
+	nEpochs = 201 # Number of epochs for training (500.000/2079)
 	batch_size = 1
 	snapshot = 1  # Store a model every snapshot epochs
 	pred_lr = 1e-8
@@ -51,7 +58,7 @@ def main(args):
 	updateG = False
 	num_frame =args.frame_nums
 
-	modelName = 'STCNN_frame_'+str(num_frame)
+	modelName = 'STCNN_frame_REST'+str(num_frame)
 
 	save_dir = Path.save_root_dir()
 	if not os.path.exists(save_dir):
@@ -64,11 +71,11 @@ def main(args):
 
 	netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
 	# Do not have a pre-trained discriminator
-	initialize_netD(netD,os.path.join(save_dir, 'FramePredModels','frame_nums_'+str(num_frame),'NetD_epoch-99.pth'))
-	seg_enc = SegEncoder()
+	initialize_netD(netD,os.path.join('/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4','NetD_epoch-99.pth'))
+	seg_enc = rest_base()
 	pred_enc = FramePredEncoder(frame_nums=num_frame)
 	pred_dec = FramePredDecoder()
-	j_seg_dec = JointSegDecoder()
+	j_seg_dec = JointSegDecoderREST()
 	if resume_epoch == 0:
 		# Do not have pre-trained
 		initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir,num_frame=num_frame)
@@ -78,7 +85,7 @@ def main(args):
 		print("Updating weights froxm: {}".format(
 			os.path.join('./output', modelName + '_epoch-' + str(resume_epoch - 1) + '.pth')))
 		net.load_state_dict(
-			torch.load(os.path.join('./output', modelName + '_epoch-' + str(resume_epoch - 1) + '.pth'),
+			torch.load("/home/r56x196/STCNN/output/STCNN_frame_REST4/STCNN_frame_REST4Davis-99.pth",
 					   map_location=lambda storage, loc: storage))
 
 
@@ -112,10 +119,24 @@ def main(args):
 											  ])
 
 	# Training dataset and its iterator
-	db_train = db.FIREDataset(inputRes=(400,710),transform=composed_transforms,num_frame=num_frame)
-	#db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join('/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/data/DAVIS16_samples_list.txt'),
-							   #transform=composed_transforms,num_frame=num_frame)
+
+	# FIRE DATASET training
+	
+	"""
+	db_train = db.DAVISDataset(inputRes=(224,224),samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
+							   transform=composed_transforms,num_frame=num_frame)
+	
 	trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
+	"""
+	
+	db_train = db.FIREDataset(inputRes=(224,224),transform=composed_transforms,mode="train", num_frame=num_frame)
+	trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
+	test_set = db.FIREDataset(inputRes=(224,224),mode="test", num_frame=num_frame)
+	test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
+	
+	
+
+
 	num_img_tr = len(trainloader)
 	iter_num = nEpochs * num_img_tr
 	curr_iter = resume_epoch * num_img_tr
@@ -123,26 +144,13 @@ def main(args):
 	real_label = torch.ones(batch_size).float().to(device)
 	fake_label = torch.zeros(batch_size).float().to(device)
 
-
-	k_folds = 5  # Number of folds
-
-	# Initialize KFold
-	kf = KFold(n_splits=k_folds, shuffle=False)
-
-	# Perform K-Fold Cross-Validation
-	for fold, (train_idx, val_idx) in enumerate(kf.split(range(len(db_train)))):  # Get indices for K-fold
-		print(f"\nFold {fold + 1}/{k_folds}")
-
-		# Create training and validation subsets
-		train_subset = Subset(db_train, train_idx)
-		val_subset = Subset(db_train, val_idx)
-
-		# Create DataLoaders for training and validation
-		train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=False, num_workers=4)
-		val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False, num_workers=4)
-
-		for epoch in range(resume_epoch, nEpochs):
-			start_time = timeit.default_timer()
+	epoch_losses = []
+	val_loss_list = []
+	lp_loss = None 
+	for epoch in range(resume_epoch, nEpochs):
+		epoch_loss = 0
+		num_batches = len(trainloader)
+		start_time = timeit.default_timer()
 
 			for ii, sample_batched in enumerate(train_loader):
 
@@ -160,43 +168,57 @@ def main(args):
 				pred_gts = pred_gts.detach()
 				seg_res, pred = net.forward(seqs, frames)
 
-				D_real = netD(pred_gts).squeeze(1)
-				errD_real = criterion(D_real, real_label)
-				D_fake = netD(pred.detach()).squeeze(1)
-				errD_fake = criterion(D_fake, fake_label)
+			D_real_input = F.interpolate(pred_gts, size=(75, 75), mode='bilinear', align_corners=False)
+			D_fake_input = F.interpolate(pred.detach(), size=(75, 75), mode='bilinear', align_corners=False)
+
+			# Discriminator passes
+			netD.eval()  # avoid batchnorm crash
+			D_real = netD(D_real_input).squeeze(1)
+			D_fake = netD(D_fake_input).squeeze(1)
+			netD.train()
+
+			# Compute discriminator losses
+			errD_real = criterion(D_real, real_label)
+			errD_fake = criterion(D_fake, fake_label)
 
 				optimizer.zero_grad()
 				seg_loss = seg_criterion(seg_res[-1], gts)
 				for i in reversed(range(len(seg_res) - 1)):
 					seg_loss = seg_loss + (1 - curr_iter / iter_num) * seg_criterion(seg_res[i],gts)
 
-				seg_loss.backward()
-				optimizer.step()
-				curr_iter += 1
-				lp_loss = None
-				if updateD:
-					############################
-					# (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
-					###########################
-					# train with real
-					netD.zero_grad()
-					# train with fake
-					d_loss = errD_fake + errD_real
-					d_loss.backward()
-					optimizerD.step()
+			seg_loss.backward()
+			optimizer.step()
+			curr_iter += 1
 
-				if updateG:
-					############################
-					# (2) Update G network: maximize log(D(G(z)))
-					###########################
-					optimizerG.zero_grad()
-					D_fake = netD(pred).squeeze(1)
-					errG = criterion(D_fake, real_label)
+			epoch_loss += seg_loss.item() 
+			if updateD:
+				############################
+				# (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
+				###########################
+				# train with real
+				netD.zero_grad()
+				# train with fake
+				d_loss = errD_fake + errD_real
+				d_loss.backward()
+				optimizerD.step()
 
-					lp_loss = lp_function(pred, pred_gts)
-					total_loss = lp_loss + beta * errG
-					total_loss.backward()
-					optimizerG.step()
+			if updateG:
+				optimizerG.zero_grad()
+
+				# Use upsampled fake for generator training too
+				netD.eval()
+				D_fake = netD(D_fake_input).squeeze(1)
+				netD.train()
+				errG = criterion(D_fake, real_label)
+
+				if pred.shape[-2:] != pred_gts.shape[-2:]:
+					pred = F.interpolate(pred, size=pred_gts.shape[-2:], mode='bilinear', align_corners=False)
+
+				lp_loss = lp_function(pred, pred_gts)
+
+				total_loss = lp_loss + beta * errG
+				total_loss.backward()
+				optimizerG.step()
 
 				if (errD_fake.data < margin).all() or (errD_real.data < margin).all():
 					updateD = False
@@ -206,85 +228,51 @@ def main(args):
 					updateD = True
 					updateG = True
 
-				if (ii + num_img_tr * epoch) % 5 == 4 and lp_loss:
-					print(
-						"Iters: [%2d] time: %4.4f, lp_loss: %.8f, G_loss: %.8f,seg_loss: %.8f"
-						% (ii + num_img_tr * epoch, timeit.default_timer() - start_time, lp_loss.item(),errG.item(), seg_loss.item())
-					)
-					print('updateD:', updateD, 'updateG:', updateG)
-				if (ii + num_img_tr * epoch) % 10 == 9 and lp_loss:
-					writer.add_scalar('data/loss_iter', total_loss.item(), ii + num_img_tr * epoch)
-					writer.add_scalar('data/lp_loss_iter', lp_loss.item(), ii + num_img_tr * epoch)
-					writer.add_scalar('data/G_loss_iter', errG.item(), ii + num_img_tr * epoch)
-					writer.add_scalar('data/seg_loss_iter', seg_loss.item(), ii + num_img_tr * epoch)
+			if (ii + num_img_tr * epoch) % 5 == 4 and lp_loss:
+				print(
+					"Iters: [%2d] time: %4.4f, lp_loss: %.8f, G_loss: %.8f,seg_loss: %.8f"
+					% (ii + num_img_tr * epoch, timeit.default_timer() - start_time, lp_loss.item(),errG.item(), seg_loss.item())
+				)
+				print('updateD:', updateD, 'updateG:', updateG)
 
-				if (ii + num_img_tr * epoch) % 20 == 0:
+		
+		avg_epoch_loss = epoch_loss / num_batches  # Compute average loss for the epoch
+		epoch_losses.append(avg_epoch_loss)  # Store epoch loss
+		print(f"Epoch [{epoch+1}/{nEpochs}] - Avg Loss: {avg_epoch_loss:.8f}")
+		val_loss = 0
+		for idx, sample in enumerate(test_loader):
+			seqs, frames, gts, pred_gts = sample['images'], sample['frame'],sample['seg_gt'], \
+										 sample['pred_gt']
 
-					seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
-					seg_pred = 1 / (1 + np.exp(-seg_pred))
-
-					gt_sample = gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])*255
-
-
-					seg_pred = seg_pred.transpose([1, 2, 0])*255
-					frame_sample = frames[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-					frame_sample = inverse_transform(frame_sample)*255
-					gt_sample3 = np.concatenate([gt_sample,gt_sample,gt_sample],axis=2)
-
-					seg_pred3 = np.concatenate([seg_pred,seg_pred,seg_pred],axis=2)
-					samples1 = np.concatenate((seg_pred3, gt_sample3, frame_sample), axis=0)
-
-					pred_sample = pred[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-					frame_sample = pred_gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-					samples2 = np.concatenate((pred_sample, frame_sample), axis=0)
-					samples2 = inverse_transform(samples2) * 255
-					print("Saving sample ...")
-					running_res_dir = os.path.join(save_dir, modelName+'_results')
-					if not os.path.exists(running_res_dir):
-						os.makedirs(running_res_dir)
-					imageio.imwrite(os.path.join(running_res_dir, "train_%s_s.png" % (ii + num_img_tr * epoch)), np.uint8(samples1))
-					imageio.imwrite(os.path.join(running_res_dir, "train_%s_p.png" % (ii + num_img_tr * epoch)), np.uint8(samples2))
-			# Print stuff
-			print('[Epoch: %d, numImages: %5d]' % (epoch, (ii + 1)*batch_size))
-			stop_time = timeit.default_timer()
-			print("Execution time: " + str(stop_time - start_time))
-			# Save the model
+			seqs, frames, gts, pred_gts = seqs.to(device), frames.to(device), gts.to(device),pred_gts.to(device)
+			seg_res, pred = net.forward(seqs, frames)
 			
-			if (epoch % snapshot) == snapshot - 1 and epoch != 0:
-				
-				metrics = None
-				total = 1
-				for ii, sample_batched in enumerate(val_loader):
+			seg_loss = seg_criterion(seg_res[-1], gts)
 
-					seqs, frames, gts, pred_gts = sample_batched['images'], sample_batched['frame'],sample_batched['seg_gt'], \
-											sample_batched['pred_gt']
-					
-					seg_res, pred = net.forward(seqs, frames)
-					seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
-					seg_pred = 1 / (1 + np.exp(-seg_pred))
+			val_loss += seg_loss.item() 
+		
+		num_samples = len(test_loader)
+		val_loss_list.append(val_loss/num_samples)
+		
+		
+		
+		
+		if (epoch % snapshot) == snapshot - 1 and epoch != 0:
+			torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + 'Davis-' + str(epoch) + '.pth'))
+	
+	plt.figure(figsize=(8, 6))  # Set figure size (optional)
+	plt.plot(range(resume_epoch, nEpochs), epoch_losses, marker='o', linestyle='-', label="Training Loss")
+	plt.plot(range(resume_epoch, nEpochs), val_loss_list, marker='s', linestyle='--', label="Validation Loss", color='r')
+	plt.xlabel("Epochs")
+	plt.ylabel("Average Loss")
+	plt.title("Training Rest Flame")
+	plt.legend()
+	plt.grid(True)
 
-					seg_pred = (seg_pred > 0.5).astype(np.uint8)
-					if not metrics:
-						metrics = compute_metrics(gts.cpu().numpy(), seg_pred)
-						print("Single metrics: ", metrics)
-					else:
-						new_metrics = compute_metrics(gts.cpu().numpy(), seg_pred)
-						for key in metrics:
-							metrics[key] += new_metrics[key]  
-							total += 1
-				
-				for key in metrics:
-					metrics[key] /= total 
-
-
-				print("Avg metrics: ", metrics)
-
-				print(metrics)
-				torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch-' + str(epoch) + '.pth'))
-
-
-
-		writer.close()
+	# Save the plot
+	plt.savefig("Training Rest Flame.png", dpi=300, bbox_inches='tight')
+	writer.close()
+	
 
 def inverse_transform(images):
 	return (images+1.)/2.
@@ -352,8 +340,7 @@ def initialize_netD(netD,model_path):
 
 def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4):
 	print("Loading weights from pretrained NetG")
-	pretrained_path = os.path.join('/Users/bezbodima/Projects/attentionCNN/STCNN/STCNN/output', 'NetG_epoch-99.pth')
-	pretrained_netG_dict = torch.load(pretrained_path, map_location=torch.device('cpu'))
+	pretrained_netG_dict = torch.load(os.path.join('/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4', 'NetG_epoch-99.pth'), map_location=torch.device(device))
 
 	model_dict = pred_enc.state_dict()
 	# 1. filter out unnecessary keys
@@ -371,24 +358,63 @@ def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec,save_dir,num_frame=4
 
 
 
-	print("Loading weights from pretrained SegBranch")  #'Seg_UPerNet_Att_single',
-	pretrained_SegBranch_dict = torch.load(os.path.join(save_dir,'Seg_Branch_epoch-11999.pth'), map_location=torch.device('cpu'))
+	print("Loading weights from pretrained SegBranch")  
+	pretrained_SegBranch_dict = torch.load("/home/r56x196/STCNN/output/Seg_Branch_ShuffleNet/Seg_Branch_ShuffleNetRest-Epochs-19999.pth", map_location=torch.device(device))
+
+	# Load encoder weights
 	model_dict = seg_enc.state_dict()
-	# 1. filter out unnecessary keys
-	pretrained_dict = {k[8:]: v for k, v in pretrained_SegBranch_dict.items() if k[8:] in model_dict}
-	# 2. overwrite entries in the existing state dict
+	missing_keys_enc = []
+	shape_mismatches_enc = []
+
+	print(len(model_dict))
+
+	# Now load the matching weights
+	encoder_dict = {k[8:]: v for k, v in pretrained_SegBranch_dict.items() if k[:8] == "encoder."}
+	print(len(encoder_dict))
+
+	pretrained_dict = {}
+	for k, v in encoder_dict.items():
+		if k in model_dict:
+			if v.shape == model_dict[k].shape:
+				pretrained_dict[k] = v
+			else: 
+				shape_mismatches_enc.append(k)
+		else:
+			missing_keys_enc.append(k)
+	print(len(pretrained_dict))
 	model_dict.update(pretrained_dict)
-	# 3. load the new state dict
 	seg_enc.load_state_dict(model_dict)
 
+	print("Encoder - Missing keys:", missing_keys_enc)
+	print("Encoder - Shape mismatches:", shape_mismatches_enc)
+
+	# Load decoder weights
 	model_dict = j_seg_dec.state_dict()
-	# 1. filter out unnecessary keys
-	pretrained_dict = {k[8:]: v for k, v in pretrained_SegBranch_dict.items() if k[8:] in model_dict}
-	# 2. overwrite entries in the existing state dict
+	missing_keys_dec = []
+	shape_mismatches_dec = []
+
+	print(len(pretrained_SegBranch_dict))
+	print(len(model_dict))
+	# Now load the matching weights
+	decoder_dict = {k[8:]: v for k, v in pretrained_SegBranch_dict.items() if k[:8] == "decoder."}
+	print(len(decoder_dict))
+
+	pretrained_dict = {}
+	for k, v in decoder_dict.items():
+		if k in model_dict:
+			if v.shape == model_dict[k].shape:
+				pretrained_dict[k] = v
+			else: 
+				shape_mismatches_enc.append(k)
+		else:
+			missing_keys_enc.append(k)
+	print(len(pretrained_dict))
 	model_dict.update(pretrained_dict)
-	# 3. load the new state dict
 	j_seg_dec.load_state_dict(model_dict)
 
+
+	print("Decoder - Missing keys:", missing_keys_dec)
+	print("Decoder - Shape mismatches:", shape_mismatches_dec)
 
 
 if __name__ == "__main__":

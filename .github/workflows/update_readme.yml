@@ -1,0 +1,40 @@
+name: Update README from Notion
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: pip install notion2md
+
+      - name: Fetch Notion Data as Markdown
+        run: python update_readme.py
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_KEY }}
+          NOTION_PAGE_ID: ${{ secrets.NOTION_PAGE_ID }}
+
+      - name: Commit and Push if Changed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add notion_export
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update README from Notion"
+          git push

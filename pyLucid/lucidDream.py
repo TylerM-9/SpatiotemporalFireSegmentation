@@ -1,8 +1,10 @@
 import cv2
 import numpy as np 
+from six import string_types
+
 
 def dreamData(img, gt, bgimg, consequent_frames):
-    if isinstance(bgimg,basestring):
+    if isinstance(bgimg,string_types):
         back_img=cv2.imread(bgimg)
     else:
         back_img=bgimg.copy()

@@ -26,7 +26,7 @@ class PatchMatch(object):
         self.AA = aa
         self.BB = bb
         self.patch_size = patch_size
-        self.nnf = np.zeros(shape=(2, self.A.shape[0], self.A.shape[1])).astype(np.int)  # the nearest neighbour field
+        self.nnf = np.zeros(shape=(2, self.A.shape[0], self.A.shape[1]), dtype=int)  # the nearest neighbour field
         self.nnd = np.zeros(shape=(self.A.shape[0], self.A.shape[1]))  # the distance map for the nnf
         self.initialise_nnf()
 

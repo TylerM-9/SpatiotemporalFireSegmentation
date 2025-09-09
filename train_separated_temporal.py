@@ -15,13 +15,12 @@ import torchvision.models as models
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import imageio
+import matplotlib.pyplot as plt
+from dataloaders import FIRE_dataloader as db
 
-from network.shuffle import PretrainedShuffleEncoder
-
-from network.joint_pred_seg import SegBranch, SegDecoderCBAM,SegEncoder,SegEncoderShuffleNet
+from network.joint_pred_seg import SegBranch, SegDecoder,SegEncoder
 from dataloaders import joint_transforms
 
-from dataloaders import voc_msra_dataloader as db
 from mypath import Path
 
 # # Select which GPU, -1 if CPU
@@ -31,15 +30,15 @@ if torch.cuda.is_available():
 	print('Using GPU: {} '.format(gpu_id))
 
 # # Setting other parameters
-last_iter = 0  # Default is 0, change if want to resume
-iter_num = 40000
+last_iter = 12000  # Default is 0, change if want to resume
+nEpochs = 50
 batch_size = 8
-snapshot = 1000  # Store a model every snapshot epochs
+snapshot = 10  # Store a model every snapshot epochs
 lr = 1e-3
 wd = 5e-4
 lr_decay = 0.9
 sidWeight = 0.5
-modelName = 'Seg_Branch_ShuffleNet'
+modelName = 'Seg_Branch'
 
 save_dir = Path.save_root_dir()
 if not os.path.exists(save_dir):
@@ -53,27 +52,25 @@ writer = SummaryWriter(log_dir=log_dir, comment='-parent')
 
 
 def main():
-
 	joint_transform = joint_transforms.Compose([
 		joint_transforms.RandomCrop(300),
 		joint_transforms.RandomHorizontallyFlip(),
 		joint_transforms.RandomRotate(10)
 	])
-
 	img_transform = transforms.Compose([
 		transforms.ToTensor(),
 		transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 	])
-
 	target_transform = transforms.ToTensor()
-	train_set = db.voc_msra_dataloadr(Path.MSRAdataset_dir(),Path.VOC_dir(), joint_transform=joint_transform, transform=img_transform, target_transform=target_transform)
+	train_set = db.FIREDatasetSegmentation(inputRes=(400,710),transform=img_transform, joint_transform=joint_transform, target_transform=target_transform)
 	train_loader = DataLoader(train_set, batch_size=batch_size, num_workers=4, shuffle=True)
 	criterion = nn.BCEWithLogitsLoss().to(device)
 
 
-	encoder = PretrainedShuffleEncoder()
+	encoder = SegEncoder()
+	initialize_SegEncoder(encoder)
 
-	decoder = SegDecoderCBAM()
+	decoder = SegDecoder()
 	net = SegBranch(net_enc=encoder,net_dec=decoder)
 	net.to(device)
 	optimizer = optim.SGD([
@@ -82,16 +79,39 @@ def main():
 		], momentum=0.9)
 
 	if last_iter > 0:
-		print ('training resumes from ' + str(last_iter))
-		net.load_state_dict(torch.load(os.path.join(save_model_dir, modelName + '_epoch-' + str(last_iter-1) + '.pth')))
+		print('Training resumes from ' + str(last_iter))
 
-	curr_iter = last_iter
+		# Load checkpoint
+		checkpoint = torch.load(
+			"/home/r56x196/ondemand/data/sys/myjobs/projects/default/3/output/Seg_Branch/Seg_Branch_epoch-11999.pth",
+			map_location=torch.device('cpu')
+		)
 
-	while True:
+		# Load with strict=False to allow partial loading
+		missing_keys, unexpected_keys = net.load_state_dict(checkpoint, strict=False)
+
+		# Print mismatch info
+		if missing_keys:
+			print("\n== Missing keys in model (not found in checkpoint):")
+			for k in missing_keys:
+				print("  ", k)
+		if unexpected_keys:
+			print("\n== Unexpected keys in checkpoint (not used in model):")
+			for k in unexpected_keys:
+				print("  ", k)
+		if not missing_keys and not unexpected_keys:
+			print("\n✅ All keys matched successfully!")
+
+	curr_iter = 0
+	epoch_losses = []
+
+	for epoch in range(nEpochs):
+		epoch_loss = 0
+		num_batches = len(train_loader)
 		start_time = timeit.default_timer()
 		for ii, sample_batched in enumerate(train_loader):
-			optimizer.param_groups[0]['lr'] = 2 * lr*(1 - float(curr_iter) / iter_num) ** lr_decay
-			optimizer.param_groups[1]['lr'] = lr * (1 - float(curr_iter) / iter_num) ** lr_decay
+			optimizer.param_groups[0]['lr'] = 2 * lr * (lr_decay ** epoch)
+			optimizer.param_groups[1]['lr'] = lr * (lr_decay ** epoch)
 
 
 			inputs, gts = sample_batched['images'], sample_batched['gts']
@@ -108,6 +128,8 @@ def main():
 			optimizer.step()
 			curr_iter += 1
 
+			epoch_loss += loss.item() 
+
 			if curr_iter % 5 == 0:
 				print(
 					"Iters: [%2d] time: %4.4f, loss: %.8f"
@@ -117,7 +139,7 @@ def main():
 			if curr_iter % 10 == 0:
 				writer.add_scalar('data/loss_iter', loss.item(), curr_iter)
 
-			if curr_iter % 1000 == 1:
+			if curr_iter % 50 == 1:
 
 				inputs = inputs[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
 				inputs = (inputs - inputs.min()) / max((inputs.max() - inputs.min()), 1e-8) * 255
@@ -139,26 +161,25 @@ def main():
 				running_res_dir = os.path.join(save_dir, modelName+'_results')
 				if not os.path.exists(running_res_dir):
 					os.makedirs(running_res_dir)
-				imageio.imwrite(os.path.join(running_res_dir, "train_%s.png" % (curr_iter)), samples)
+				imageio.imwrite(os.path.join(running_res_dir, "train_fire_seg_%s.png" % (curr_iter)), samples)
+		avg_epoch_loss = epoch_loss / num_batches  # Compute average loss for the epoch
+		epoch_losses.append(avg_epoch_loss)  # Store epoch loss
+		print(f"Epoch [{epoch+1}/{nEpochs}] - Avg Loss: {avg_epoch_loss:.8f}")
 
-			# Save the model
-			if (curr_iter % snapshot) == snapshot - 1:
-				torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + 'ShuffleNet_epoch-' + str(curr_iter) + '.pth'))
-			if curr_iter == iter_num:
-				return
-'''
-def initialize_SegEncoder(net):
-	print("Loading weights from PyTorch ResNet101")
-	pretrained_dict = torch.load(os.path.join('./models', 'resnet101_pytorch.pth'))
-	model_dict = net.state_dict()
-	# 1. filter out unnecessary keys
-	pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+		# Save the model
+		if (epoch % snapshot) == snapshot - 1:
+			torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + '_epoch_fire_segmentation_only -' + str(curr_iter) + '.pth'))
+		if epoch == nEpochs:
+			return
+	plt.figure(figsize=(8, 5))
+	plt.plot(range(1, nEpochs + 1), epoch_losses, marker='o', linestyle='-', color='blue', label='Loss')
+	plt.xlabel("Epoch")
+	plt.ylabel("Loss")
+	plt.title("Loss vs Epoch Flame Training No Temporal")
+	plt.legend()
+	plt.grid(True)
 
-	# 2. overwrite entries in the existing state dict
-	model_dict.update(pretrained_dict)
-	# 3. load the new state dict
-	net.load_state_dict(model_dict)
-'''
+	plt.savefig("epoch_loss_flame_training_notemporal.png", dpi=300, bbox_inches='tight')
 
 def initialize_SegEncoder(net):
     print("Loading weights from PyTorch ResNet101 (online)")

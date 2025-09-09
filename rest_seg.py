@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from ResT.models.rest import *
 import os
 from datetime import datetime
 import socket
@@ -18,7 +19,7 @@ import imageio
 
 from network.shuffle import PretrainedShuffleEncoder
 
-from network.joint_pred_seg import SegBranch, SegDecoderCBAM,SegEncoder,SegEncoderShuffleNet
+from network.joint_pred_seg import SegBranch, SegDecoderRest,SegEncoder,SegEncoderShuffleNet
 from dataloaders import joint_transforms
 
 from dataloaders import voc_msra_dataloader as db
@@ -55,7 +56,7 @@ writer = SummaryWriter(log_dir=log_dir, comment='-parent')
 def main():
 
 	joint_transform = joint_transforms.Compose([
-		joint_transforms.RandomCrop(300),
+		joint_transforms.RandomCrop(224),
 		joint_transforms.RandomHorizontallyFlip(),
 		joint_transforms.RandomRotate(10)
 	])
@@ -71,9 +72,16 @@ def main():
 	criterion = nn.BCEWithLogitsLoss().to(device)
 
 
-	encoder = PretrainedShuffleEncoder()
+	encoder = rest_base()
 
-	decoder = SegDecoderCBAM()
+	state_dict = torch.load("/home/r56x196/Data/rest_base.pth", map_location=device)
+	# Initialize your model
+	model = rest_base()
+	# Load weights into the model
+	encoder.load_state_dict(state_dict)
+
+
+	decoder = SegDecoderRest()
 	net = SegBranch(net_enc=encoder,net_dec=decoder)
 	net.to(device)
 	optimizer = optim.SGD([
@@ -143,7 +151,7 @@ def main():
 
 			# Save the model
 			if (curr_iter % snapshot) == snapshot - 1:
-				torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + 'ShuffleNet_epoch-' + str(curr_iter) + '.pth'))
+				torch.save(net.state_dict(), os.path.join(save_model_dir, modelName + 'Rest-Epochs-' + str(curr_iter) + '.pth'))
 			if curr_iter == iter_num:
 				return
 '''

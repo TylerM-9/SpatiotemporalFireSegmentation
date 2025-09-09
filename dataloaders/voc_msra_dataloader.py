@@ -10,6 +10,7 @@ import random
 import cv2
 import skimage.morphology as sm
 from dataloaders import custom_transforms as tr
+from dataloaders import joint_transforms
 from torchvision import transforms
 
 num_classes = 21
@@ -114,53 +115,36 @@ class VOC(data.Dataset):
 
 
 class voc_msra_dataloadr(data.Dataset):
-	# image and gt should be in the same folder and have same filename except extended name (jpg and png respectively)
-	def __init__(self, msra_root,voc_root, joint_transform=None, transform=None, target_transform=None):
+    def __init__(self, msra_root, voc_root, joint_transform=None, transform=None, target_transform=None):
+        self.imgs_msra = make_msra_dataset(msra_root)
+        self.imgs_voc = make_voc_dataset('train', voc_root)
+        self.imgs = self.imgs_msra + self.imgs_voc
+        self.joint_transform = joint_transform
+        self.transform = transform
+        self.target_transform = target_transform
+        self.msra_num = len(self.imgs_msra)
 
-		self.imgs_msra = make_msra_dataset(msra_root)
-		self.imgs_voc = make_voc_dataset('train',voc_root)
-		self.imgs = []
-		self.imgs.extend(self.imgs_msra)
-		self.imgs.extend(self.imgs_voc)
-		self.joint_transform = joint_transform
-		self.transform = transform
-		self.target_transform = target_transform
-		self.msra_num = len(self.imgs_msra)
+    def __getitem__(self, index):
+        img_path, gt_path = self.imgs[index]
+        img = Image.open(img_path).convert('RGB')
+        target = Image.open(gt_path).convert('L')
 
-	def __getitem__(self, index):
-		img_path, gt_path = self.imgs[index]
-		img = Image.open(img_path).convert('RGB')
-		target = Image.open(gt_path).convert('L')
-		"""
-		if index < self.msra_num:
-			img_path, gt_path = self.imgs[index]
-			img = Image.open(img_path).convert('RGB')
-			target = Image.open(gt_path).convert('L')
-		else:
-			img_path, mask_path = self.imgs[index]
-			img = Image.open(img_path).convert('RGB')
-            
-            # Load VOC mask as PNG instead of .mat
-			print(mask_path)
-			target = Image.open(mask_path).convert('L')
-            
-            # Convert to numpy array if needed
-			target = np.array(target, dtype=np.float32)
-			target[target > 0] = 255.0  # Binarize mask
-		"""
+        # Apply joint_transform first (image + target together)
+        if self.joint_transform is not None:
+            img, target = self.joint_transform(img, target)
 
-		if self.joint_transform is not None:
-			img, target = self.joint_transform(img, target)
-		if self.transform is not None:
-			img = self.transform(img)
-		if self.target_transform is not None:
-			target = self.target_transform(target)
-		target = target.numpy()
-		sample = {'images':img, 'gts': target}
-		return sample
+        # Apply individual transforms
+        if self.transform is not None:
+            img = self.transform(img)  # should turn into Tensor
+        if self.target_transform is not None:
+            target = self.target_transform(target)  # should turn into Tensor
 
-	def __len__(self):
-		return len(self.imgs)
+        target = target.numpy()  # optional, if your model expects NumPy
+        sample = {'images': img, 'gts': target}
+        return sample
+
+    def __len__(self):
+        return len(self.imgs)
 
 
 

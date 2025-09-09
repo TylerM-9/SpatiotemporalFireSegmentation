@@ -10,6 +10,7 @@ import random
 import imageio
 import cv2
 import skimage.morphology as sm
+from PIL import Image
 from torch.utils.data import Dataset
 from dataloaders import custom_transforms as tr
 
@@ -17,13 +18,15 @@ class FIREDatasetGeneral(Dataset):
 	def __init__(self,
 				inputRes=None,
 				image_path="/home/r56x196/Data/archive-2/Image/Merged",
-				mask_path="/home/r56x196/Data/archive-2/Merged/Fire",
+				mask_path="/home/r56x196/Data/archive-2/Mask/Fire",
 				transform=None,
 				num_frame=4):
 		self.transform = transform
 		self.inputRes = inputRes
 		self.toTensor = tr.ToTensor()
 		self.num_frame = num_frame
+
+		self.split = image_path[-1]
 
 		image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
 
@@ -59,12 +62,12 @@ class FIREDatasetGeneral(Dataset):
 
 		img = []
 		for i in range(idx, idx + self.num_frame):
-			imge = imageio.imread(self.image_files[i])
-			imge = np.array(imge, dtype=np.float32)
+			imgs = imageio.imread(self.image_files[i])
+			imgs = np.array(imgs, dtype=np.float32)
 			if (self.inputRes is not None):
-				imge = cv2.resize(imge, (self.inputRes[1], self.inputRes[0]))
+				imgs = cv2.resize(imgs, (self.inputRes[1], self.inputRes[0]))
 
-			img.append(imge)
+			img.append(imgs)
 
 		gt = cv2.imread(self.masks[idx + self.num_frame], 0)
 		gt[gt == 1] = 255
@@ -74,6 +77,8 @@ class FIREDatasetGeneral(Dataset):
 			gt = cv2.resize(gt, (self.inputRes[1], self.inputRes[0]), 
 						interpolation=cv2.INTER_NEAREST)
 			frame = cv2.resize(frame, (self.inputRes[1], self.inputRes[0]))
+
+		print("split: ", self.split)
 		img = np.concatenate(img,axis=2)
 
 		img = np.array(img, dtype=np.float32)
@@ -113,12 +118,10 @@ class FIREDatasetSingle(Dataset):
 	def __init__(self, inputRes=None,
 			  	 samples_path="/home/r56x196/Data/Mask_Data",
 				 transform=None,
-				 mode="train",
-				 num_frame=4):
+				 mode="train"):
 		self.transform = transform
 		self.inputRes = inputRes
 		self.toTensor = tr.ToTensor()
-		self.num_frame = num_frame
 
 		image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
 
@@ -147,7 +150,7 @@ class FIREDatasetSingle(Dataset):
 			key=lambda x: numerical_key(os.path.basename(x))
 		)
 	def __len__(self):
-		return len(self.image_files) - self.num_frame
+		return len(self.image_files)
 
 
 	def __getitem__(self, idx):
@@ -158,9 +161,9 @@ class FIREDatasetSingle(Dataset):
 			img = cv2.resize(img, (self.inputRes[1], self.inputRes[0]))
 
 
-		gt = cv2.imread(self.masks[idx + self.num_frame], 0)
+		gt = cv2.imread(self.masks[idx], 0)
 		gt[gt == 1] = 255
-		frame = imageio.imread(self.image_files[idx + self.num_frame])
+		frame = imageio.imread(self.image_files[idx])
 		# Resize gt and frame
 		if self.inputRes is not None:
 			gt = cv2.resize(gt, (self.inputRes[1], self.inputRes[0]), 
@@ -204,8 +207,9 @@ class FIREDatasetSingle(Dataset):
 
 class FIREDataset(Dataset):
 	def __init__(self, inputRes=None,
-			  	 samples_path="/Users/bezbodima/Projects/attentionCNN/FFS-UNet/Mask_Data",
+			  	 samples_path="/home/r56x196/Data/Mask_Data",
 				 transform=None,
+				 mode="test",
 				 num_frame=4):
 		self.transform = transform
 		self.inputRes = inputRes
@@ -221,23 +225,23 @@ class FIREDataset(Dataset):
 
 		self.image_files = sorted(
 			[
-				os.path.join(samples_path, "Images", f)
-				for f in os.listdir(os.path.join(samples_path, "Images"))
-				if os.path.isfile(os.path.join(samples_path, "Images", f)) 
+				os.path.join(samples_path, "Images",mode, f)
+				for f in os.listdir(os.path.join(samples_path, "Images",mode))
+				if os.path.isfile(os.path.join(samples_path, "Images",mode, f)) 
 				and os.path.splitext(f)[1].lower() in image_extensions
 			],
 			key=lambda x: numerical_key(os.path.basename(x))
-		)[:10]
+		)
 
 		self.masks = sorted(
 			[
-				os.path.join(samples_path, "Masks", f)
-				for f in os.listdir(os.path.join(samples_path, "Masks"))
-				if os.path.isfile(os.path.join(samples_path, "Masks", f)) 
+				os.path.join(samples_path, "Masks",mode, f)
+				for f in os.listdir(os.path.join(samples_path, "Masks",mode))
+				if os.path.isfile(os.path.join(samples_path, "Masks",mode, f)) 
 				and os.path.splitext(f)[1].lower() in image_extensions
 			],
 			key=lambda x: numerical_key(os.path.basename(x))
-		)[:10]
+		)
 
 	def __len__(self):
 		return len(self.image_files) - self.num_frame
@@ -252,8 +256,6 @@ class FIREDataset(Dataset):
 				imgs = cv2.resize(imgs, (self.inputRes[1], self.inputRes[0]))
 
 			img.append(imgs)
-
-		print("read image")
 
 		gt = cv2.imread(self.masks[idx + self.num_frame], 0)
 		gt[gt == 1] = 255
@@ -282,7 +284,6 @@ class FIREDataset(Dataset):
 
 		if self.transform is not None:
 			sample = self.transform(sample)
-		print("transformed")
 
 		img = sample['images']
 		img[np.isnan(img)] = 0.
@@ -297,5 +298,77 @@ class FIREDataset(Dataset):
 		pred_gt = pred_gt / 127.5 - 1.
 		sample['pred_gt'] = pred_gt
 		sample = self.toTensor(sample)
-		print("retured")
+		return sample
+
+class FIREDatasetSegmentation(Dataset):
+	def __init__(self,
+					inputRes=None,
+					image_path="/home/r56x196/Data/Mask_Data/Images/train",
+					mask_path="/home/r56x196/Data/Mask_Data/Masks/train",
+					joint_transform=None, 
+					transform=None, 
+					target_transform=None):
+		self.joint_transform = joint_transform
+		self.transform = transform
+		self.target_transform = target_transform
+		self.inputRes = inputRes
+		image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
+
+		def numerical_key(filename):
+			# Extract the first number found in the filename
+			numbers = re.findall(r'\d+', filename)
+			return int(numbers[0]) if numbers else -1
+
+		# Get sorted list of image and mask files
+		self.image_files = sorted(
+			[
+				os.path.join(image_path, f)
+				for f in os.listdir(image_path)
+				if os.path.isfile(os.path.join(image_path, f)) 
+				and os.path.splitext(f)[1].lower() in image_extensions
+			],
+			key=lambda x: numerical_key(os.path.basename(x))
+		)
+
+		self.masks = sorted(
+			[
+				os.path.join(mask_path, f)
+				for f in os.listdir(mask_path)
+				if os.path.isfile(os.path.join(mask_path, f)) 
+				and os.path.splitext(f)[1].lower() in image_extensions
+			],
+			key=lambda x: numerical_key(os.path.basename(x))
+		)
+
+	def __len__(self):
+		return len(self.image_files) 
+
+	def __getitem__(self, idx):
+		# Load images
+		frame = Image.open(self.image_files[idx]).convert('RGB')
+		gt = Image.open(self.masks[idx]).convert('L')
+		
+		# Ensure same size BEFORE converting to numpy
+		# This step is important because we need to match sizes while still in PIL format
+		if frame.size != gt.size:
+			gt = gt.resize(frame.size, Image.NEAREST)
+		
+		# Apply resize if needed (still in PIL format)
+		if self.inputRes is not None:
+			frame = frame.resize((self.inputRes[1], self.inputRes[0]), Image.BILINEAR)
+			gt = gt.resize((self.inputRes[1], self.inputRes[0]), Image.NEAREST)
+
+		# Apply transformations
+		if self.joint_transform is not None:
+			frame, gt = self.joint_transform(frame, gt)
+		if self.transform is not None:
+			frame = self.transform(frame)
+		if self.target_transform is not None:
+			gt = self.target_transform(gt)
+		gt = gt.numpy()
+		gt[gt > 0] = 1.0
+
+		# Create sample dictionary
+		sample = {'images': frame, 'gts': gt}
+
 		return sample
