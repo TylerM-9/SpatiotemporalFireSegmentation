@@ -1,175 +1,396 @@
-
-from network.joint_pred_seg import STCNN,FramePredDecoder,FramePredEncoder,SegEncoder,JointSegDecoder, JointSegDecoderNoPPM
 import numpy as np
 import os
 from mypath import Path
 import torch
-import imageio
 from dataloaders import FIRE_dataloader as db
 from torchvision import transforms
 from dataloaders import custom_transforms as tr
-from torch.utils.data import DataLoader, ConcatDataset
+from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 
-def main(frame, epochs):
+from network.joint_pred_seg import FramePredDecoder, FramePredEncoder, SegEncoder, JointSegDecoder, STCNN
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+model_path = "/home/r56x196/STCNN/output/STCNN_frame_NO_DAVIS4/STCNN_frame_NO_DAVIS4Flame-149.pth"
+model_name = "STCNN_frame_NO_DAVIS4"
+
+
+def main(frame, epochs, test_thresholds=None):
+    """
+    Main testing function that evaluates model across multiple thresholds
+
+    Args:
+        frame: Number of input frames
+        epochs: Epoch number of the model to load
+        test_thresholds: List of thresholds to test (default: [0.1, 0.2, ..., 0.9])
+    """
+    if test_thresholds is None:
+        test_thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+
     num_frame = frame
     num_epochs = epochs
-    modelName = 'STCNN_frame_'+str(num_frame)
-
-    gpu_id = 0
-    device = torch.device("cuda:"+str(gpu_id) if torch.cuda.is_available() else "cpu")
 
     save_dir = Path.save_root_dir()
-    save_model_dir = os.path.join(save_dir, modelName)
+    save_model_dir = os.path.join(save_dir, model_name)
 
     seg_enc = SegEncoder()
+    j_seg_dec = JointSegDecoder()
     pred_enc = FramePredEncoder(frame_nums=num_frame)
     pred_dec = FramePredDecoder()
-    j_seg_dec = JointSegDecoderNoPPM()
-
     net = STCNN(pred_enc, seg_enc, pred_dec, j_seg_dec)
-    net.load_state_dict(
-            torch.load("/home/r56x196/STCNN/output/STCNN_frame_NoPPM4/STCNN_frame_NoPPM4FLAME_NoPPM-199.pth",map_location=device))
 
-    net = net.to(device)
-    net.eval() 
+    if os.path.exists(model_path):
+        print(f"Resuming from: {model_path}")
+        net.load_state_dict(torch.load(model_path, map_location=device))
+
+    print("Loading weights from: {}".format(model_path))
+    print(f"Testing thresholds: {test_thresholds}")
+
+    for threshold in test_thresholds:
+        if not os.path.exists(model_path):
+            print(f"Error: Model file not found at {model_path}")
+            return
+
+        net.to(device)
+        net.eval()
+
+        composed_transforms = transforms.Compose([
+            tr.RandomHorizontalFlip(),
+            tr.ScaleNRotate(rots=(-30, 30), scales=(0.75, 1.25)),
+        ])
+
+        test_set = db.FIREDatasetRandom(
+            inputRes=(256, 256),
+            mode="test",
+            num_frame=num_frame
+        )
+
+        testloader = DataLoader(
+            test_set,
+            batch_size=1,
+            num_workers=4,
+            shuffle=False
+        )
+
+        print(f"Total dataset size: {len(testloader)} images")
+        print("=" * 60)
+
+        examples_dir = os.path.join(save_model_dir, f"examples_epoch{num_epochs}_t{threshold:.1f}")
+        os.makedirs(examples_dir, exist_ok=True)
+        print(f"Saving example images to: {examples_dir}")
+
+        # Initialize metric accumulators
+        total_iou = 0
+        total_pa = 0
+        total_dice = 0
+        total_precision = 0
+        total_recall = 0
+        per_class_iou = []
+        processed_count = 0
+
+        num_examples_to_save = 20
+        save_interval = max(1, len(testloader) // num_examples_to_save)
+
+        with torch.no_grad():
+            for ii, sample_batched in enumerate(testloader):
+                seqs = sample_batched['images'].to(device)
+                frames = sample_batched['frame'].to(device)
+                gts = sample_batched['seg_gt']
+                pred_gts = sample_batched['pred_gt']
+
+                seg_res, pred = net.forward(seqs, frames)
+
+                # FIX: Extract tensor from list first
+                if isinstance(seg_res, list):
+                    seg_res_tensor = seg_res[0]
+                else:
+                    seg_res_tensor = seg_res
+
+                seg_pred = seg_res_tensor[0, :, :, :].data.cpu().numpy()
+                seg_pred = 1 / (1 + np.exp(-seg_pred))
+
+                gt_sample = gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
+                if gt_sample.max() > 1.0:
+                    gt_sample = gt_sample / 255.0
+
+                # Calculate all metrics
+                current_iou = iou_score(gt_sample, seg_pred, threshold)
+                current_pa = pixel_accuracy(gt_sample, seg_pred, threshold)
+                current_dice = dice_loss(gt_sample, seg_pred, threshold)
+                current_precision = precision_score(gt_sample, seg_pred, threshold)
+                current_recall = recall_score(gt_sample, seg_pred, threshold)
+
+                bg_iou = iou_score_class(gt_sample, seg_pred, threshold, target_class=0)
+                fg_iou = iou_score_class(gt_sample, seg_pred, threshold, target_class=1)
+                per_class_iou.append([bg_iou, fg_iou])
+
+                total_iou += current_iou
+                total_pa += current_pa
+                total_dice += current_dice
+                total_precision += current_precision
+                total_recall += current_recall
+                processed_count += 1
+
+                if ii % save_interval == 0 and ii < num_examples_to_save * save_interval:
+                    save_example_image(seqs, gt_sample, seg_pred, ii, current_iou,
+                                       current_dice, current_precision, current_recall,
+                                       examples_dir, threshold)
+
+                if (ii + 1) % 100 == 0:
+                    print(f"Processed {ii + 1}/{len(testloader)} images...")
+                    print(f"  Current averages - IoU: {total_iou / processed_count:.4f}, "
+                          f"PA: {total_pa / processed_count:.4f}, "
+                          f"Dice: {total_dice / processed_count:.4f}, "
+                          f"Precision: {total_precision / processed_count:.4f}, "
+                          f"Recall: {total_recall / processed_count:.4f}")
+
+        # Calculate final metrics
+        if processed_count > 0:
+            mean_iou = total_iou / processed_count
+            mean_pa = total_pa / processed_count
+            mean_dice = total_dice / processed_count
+            mean_precision = total_precision / processed_count
+            mean_recall = total_recall / processed_count
+
+            per_class_iou = np.array(per_class_iou)
+            mean_bg_iou = np.mean(per_class_iou[:, 0])
+            mean_fg_iou = np.mean(per_class_iou[:, 1])
+            mean_iou_classes = (mean_bg_iou + mean_fg_iou) / 2
+
+            # Calculate F1 score from precision and recall
+            f1_score = 2 * (mean_precision * mean_recall) / (mean_precision + mean_recall) if (
+                                                                                                      mean_precision + mean_recall) > 0 else 0
+
+            print("=" * 60)
+            print("FINAL RESULTS")
+            print("=" * 60)
+            print(f"Model: {model_name}")
+            print(f"Dataset: {processed_count} images")
+            print(f"Threshold: {threshold}")
+            print("-" * 40)
+            print(f"IoU (Foreground):       {mean_iou:.4f}")
+            print(f"Mean IoU (All Classes): {mean_iou_classes:.4f}")
+            print(f"  - Background IoU:     {mean_bg_iou:.4f}")
+            print(f"  - Foreground IoU:     {mean_fg_iou:.4f}")
+            print(f"Mean Pixel Accuracy:    {mean_pa:.4f}")
+            print(f"Precision:              {mean_precision:.4f}")
+            print(f"Recall:                 {mean_recall:.4f}")
+            print(f"F1 Score:               {f1_score:.4f}")
+            print(f"Dice Score:             {1 - mean_dice:.4f}")
+            print(f"Dice Loss:              {mean_dice:.4f}")
+            print("=" * 60)
+
+            # Save results to file
+            results_file = f"evaluation_results_{model_name}_t{threshold:.1f}.txt"
+            with open(results_file, 'w') as f:
+                f.write("STCNN Model Evaluation Results\n")
+                f.write("=" * 50 + "\n")
+                f.write(f"Model: {model_name}\n")
+                f.write(f"Epochs: {num_epochs}\n")
+                f.write(f"Frames: {num_frame}\n")
+                f.write(f"Threshold: {threshold}\n")
+                f.write(f"Dataset Size: {processed_count} images\n")
+                f.write("-" * 50 + "\n")
+                f.write(f"IoU (Foreground):       {mean_iou:.6f}\n")
+                f.write(f"Mean IoU (All Classes): {mean_iou_classes:.6f}\n")
+                f.write(f"  - Background IoU:     {mean_bg_iou:.6f}\n")
+                f.write(f"  - Foreground IoU:     {mean_fg_iou:.6f}\n")
+                f.write(f"Mean Pixel Accuracy:    {mean_pa:.6f}\n")
+                f.write(f"Precision:              {mean_precision:.6f}\n")
+                f.write(f"Recall:                 {mean_recall:.6f}\n")
+                f.write(f"F1 Score:               {f1_score:.6f}\n")
+                f.write(f"Dice Score:             {1 - mean_dice:.6f}\n")
+                f.write(f"Dice Loss:              {mean_dice:.6f}\n")
+
+            print(f"Results saved to: {results_file}")
+            save_comparison_grid(examples_dir, num_examples=9)
+        else:
+            print("No images were processed!")
 
 
-    available_splits = 17
-    general_test_set = []
-    for i in range(1, available_splits+1):
-        general_test_set.append(db.FIREDatasetGeneral(inputRes=(400,710), image_path=f"/home/r56x196/Data/archive-2/Image/split_{i}",
-        mask_path=f"/home/r56x196/Data/archive-2/Mask/split_{i}",num_frame=num_frame))
-
-    test_set = ConcatDataset(general_test_set)
-    test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=False)
-
-    """
-    test_set = db.FIREDataset(inputRes=(400,710),mode="test", num_frame=num_frame)
-    test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=False)
-
-    num_img_test = len(test_loader)
-    """
-
-    iou = 0
-    iou_mean = 0
-    pa = 0
-    dice = 0
-    for ii, sample_batched in enumerate(test_loader):
-        seqs, frames, gts, pred_gts = (
-            sample_batched['images'].to(device), 
-            sample_batched['frame'].to(device),
-            sample_batched['seg_gt'].to(device),
-            sample_batched['pred_gt'].to(device)
-        ) 
-
-        seg_res, pred = net(seqs, frames)
-
-        seg_pred = seg_res[-1][0, :, :, :].data.cpu().numpy()
-        seg_pred = 1 / (1 + np.exp(-seg_pred))
-
-        gt_sample = gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])*255
-        pred_gts_sample = pred_gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])*255
-
-        iou += iou_score(gt_sample,seg_pred)
-        pa += pixel_accuracy(gt_sample,seg_pred)
-        dice += dice_coefficient(gt_sample,seg_pred)
-        iou_mean += iou_score_mean(gt_sample,seg_pred)
-
-        print("IoU ", ii, " :", iou_score(gt_sample,seg_pred))
-        print("Pixel Accuracy ", ii, " :", pixel_accuracy(gt_sample,seg_pred))
-
-        if ii % 20 == 1:
-
-            seg_pred = seg_pred.transpose([1, 2, 0])*255
-            frame_sample = pred_gts[0, :, :, :].data.cpu().numpy().transpose([1, 2, 0])
-            frame_sample = inverse_transform(frame_sample)*255
-            gt_sample3 = np.concatenate([gt_sample,gt_sample,gt_sample],axis=2)
-
-            seg_pred3 = np.concatenate([seg_pred,seg_pred,seg_pred],axis=2)
-            samples1 = np.concatenate((seg_pred3,frame_sample), axis=0)
-            imageio.imwrite(os.path.join("test_fire_FLAME_NoPPM_%s_s.png" % ii), np.uint8(samples1))
-
-    print("FINAL IoU: ", iou/num_img_test)
-    print("FINAL Pixel Accuracy: ", pa/num_img_test)
-    print("Final Dice:", dice/num_img_test)
-    print("FINAL mean IoU: ", iou_mean/num_img_test)
-
-
-def iou_score_mean(y_true, y_pred, threshold=0.5):
+def precision_score(y_true, y_pred, threshold=0.5):
+    """Calculate Precision: TP / (TP + FP)"""
     y_pred_bin = (y_pred > threshold).astype(np.uint8)
+    y_true_bin = (y_true > threshold).astype(np.uint8)
 
-    y_true = np.squeeze(y_true)
+    y_true_bin = np.squeeze(y_true_bin)
     y_pred_bin = np.squeeze(y_pred_bin)
 
-    # Fix y_true to be {0,1}
-    adj_y_true = y_true.copy()
-    adj_y_true[adj_y_true == 255] = 1
+    true_positives = np.logical_and(y_true_bin == 1, y_pred_bin == 1).sum()
+    false_positives = np.logical_and(y_true_bin == 0, y_pred_bin == 1).sum()
 
-    tp = np.sum((adj_y_true == 1) & (y_pred_bin == 1))
-    tn = np.sum((adj_y_true == 0) & (y_pred_bin == 0))
-    fp = np.sum((adj_y_true == 0) & (y_pred_bin == 1))
-    fn = np.sum((adj_y_true == 1) & (y_pred_bin == 0))
+    return true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0.0
 
-    iou_foreground = tp / (tp + fp + fn + 1e-8)
-    iou_background = tn / (tn + fp + fn + 1e-8)
-    
-    mean_iou = 0.5 * (iou_foreground + iou_background)
 
-    return mean_iou
+def recall_score(y_true, y_pred, threshold=0.5):
+    """Calculate Recall (Sensitivity): TP / (TP + FN)"""
+    y_pred_bin = (y_pred > threshold).astype(np.uint8)
+    y_true_bin = (y_true > threshold).astype(np.uint8)
+
+    y_true_bin = np.squeeze(y_true_bin)
+    y_pred_bin = np.squeeze(y_pred_bin)
+
+    true_positives = np.logical_and(y_true_bin == 1, y_pred_bin == 1).sum()
+    false_negatives = np.logical_and(y_true_bin == 1, y_pred_bin == 0).sum()
+
+    return true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0.0
+
 
 def iou_score(y_true, y_pred, threshold=0.5):
+    """Calculate IoU score (Intersection over Union)."""
     y_pred_bin = (y_pred > threshold).astype(np.uint8)
+    y_true_bin = (y_true > threshold).astype(np.uint8)
 
-    y_true = np.squeeze(y_true)
+    y_true_bin = np.squeeze(y_true_bin)
     y_pred_bin = np.squeeze(y_pred_bin)
 
-    # Fix y_true to be {0,1}
-    adj_y_true = y_true.copy()
-    adj_y_true[adj_y_true == 255] = 1
+    intersection = np.logical_and(y_true_bin, y_pred_bin).sum()
+    union = np.logical_or(y_true_bin, y_pred_bin).sum()
 
-    tp = np.sum((adj_y_true == 1) & (y_pred_bin == 1))
-    tn = np.sum((adj_y_true == 0) & (y_pred_bin == 0))
-    fp = np.sum((adj_y_true == 0) & (y_pred_bin == 1))
-    fn = np.sum((adj_y_true == 1) & (y_pred_bin == 0))
+    return intersection / union if union != 0 else 1.0
 
 
-    return tp / (tp + fn + fp)
+def iou_score_class(y_true, y_pred, threshold=0.5, target_class=1):
+    """Calculate IoU score for a specific class."""
+    y_pred_bin = (y_pred > threshold).astype(np.uint8)
+    y_true_bin = (y_true > threshold).astype(np.uint8)
 
+    y_true_bin = np.squeeze(y_true_bin)
+    y_pred_bin = np.squeeze(y_pred_bin)
 
-def inverse_transform(images):
-	return (images+1.)/2.
+    if target_class == 0:
+        y_true_class = (y_true_bin == 0).astype(np.uint8)
+        y_pred_class = (y_pred_bin == 0).astype(np.uint8)
+    else:
+        y_true_class = y_true_bin
+        y_pred_class = y_pred_bin
 
-import numpy as np
+    intersection = np.logical_and(y_true_class, y_pred_class).sum()
+    union = np.logical_or(y_true_class, y_pred_class).sum()
+
+    return intersection / union if union != 0 else 1.0
+
 
 def pixel_accuracy(y_true, y_pred, threshold=0.5):
+    """Calculate pixel-wise accuracy."""
     y_pred_bin = (y_pred > threshold).astype(np.uint8)
+    y_true_bin = (y_true > threshold).astype(np.uint8)
 
-    y_true = np.squeeze(y_true)
+    y_true_bin = np.squeeze(y_true_bin)
     y_pred_bin = np.squeeze(y_pred_bin)
 
-    # Fix y_true to be {0,1}
-    adj_y_true = y_true.copy()
-    adj_y_true[adj_y_true == 255] = 1
+    correct_pixels = (y_true_bin == y_pred_bin).sum()
+    total_pixels = y_true_bin.size
 
-    tp = np.sum((adj_y_true == 1) & (y_pred_bin == 1))
-    tn = np.sum((adj_y_true == 0) & (y_pred_bin == 0))
-    fp = np.sum((adj_y_true == 0) & (y_pred_bin == 1))
-    fn = np.sum((adj_y_true == 1) & (y_pred_bin == 0))
+    return correct_pixels / total_pixels if total_pixels > 0 else 1.0
 
-    m_pixel_accuracy = 1/2 * (tn / (tn + fp) + tp / (tp + fn))
-    return m_pixel_accuracy
 
-def dice_coefficient(y_true, y_pred, threshold=0.5):
-    """Computes the Dice Coefficient for segmentation."""
-    y_pred_bin = (y_pred > threshold).astype(np.uint8)
+def dice_loss(y_true, y_pred, threshold=0.5, smooth=1e-6):
+    """Calculate Dice loss (1 - Dice coefficient)."""
+    y_pred_bin = (y_pred > threshold).astype(np.float32)
+    y_true_bin = (y_true > threshold).astype(np.float32)
 
-    y_true = np.squeeze(y_true)
-    y_pred_bin = np.squeeze(y_pred_bin) 
+    y_true_bin = np.squeeze(y_true_bin)
+    y_pred_bin = np.squeeze(y_pred_bin)
 
-    adj_y_true = y_true.copy()
-    adj_y_true[adj_y_true == 255] = 1
+    intersection = (y_true_bin * y_pred_bin).sum()
+    dice_coef = (2. * intersection + smooth) / (y_true_bin.sum() + y_pred_bin.sum() + smooth)
 
-    intersection = np.logical_and(adj_y_true, y_pred_bin).sum()
-    return (2. * intersection) / (adj_y_true.sum() + y_pred_bin.sum() + 1e-8)
+    return 1 - dice_coef
 
-main(4, 149)
+
+def save_example_image(input_img, gt_sample, seg_pred, index, iou, dice, precision, recall, save_dir, threshold):
+    """Save a visualization comparing input image, ground truth, and prediction."""
+    import matplotlib.pyplot as plt
+
+    if torch.is_tensor(input_img):
+        input_numpy = input_img.cpu().numpy()
+    else:
+        input_numpy = input_img
+
+    if len(input_numpy.shape) == 4:
+        input_frame = input_numpy[0, -3:, :, :].transpose(1, 2, 0)
+    elif len(input_numpy.shape) == 3:
+        input_frame = input_numpy[-3:, :, :].transpose(1, 2, 0)
+    else:
+        raise ValueError(f"Unexpected input shape: {input_numpy.shape}")
+
+    input_frame = (input_frame + 1.0) / 2.0
+    input_frame = np.clip(input_frame, 0, 1)
+
+    gt_display = np.squeeze(gt_sample)
+    pred_binary = (seg_pred > threshold).astype(np.float32)
+    pred_display = np.squeeze(pred_binary)
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    axes[0].imshow(input_frame)
+    axes[0].set_title('Input Image', fontsize=12, fontweight='bold')
+    axes[0].axis('off')
+
+    axes[1].imshow(input_frame)
+    axes[1].imshow(gt_display, alpha=0.5, cmap='jet')
+    axes[1].set_title('Ground Truth', fontsize=12, fontweight='bold')
+    axes[1].axis('off')
+
+    axes[2].imshow(input_frame)
+    axes[2].imshow(pred_display, alpha=0.5, cmap='jet')
+    axes[2].set_title(f'Prediction\nIoU: {iou:.4f} | Dice: {1 - dice:.4f}\nP: {precision:.4f} | R: {recall:.4f}',
+                      fontsize=11, fontweight='bold')
+    axes[2].axis('off')
+
+    fig.suptitle(f'Sample {index} - Threshold: {threshold}',
+                 fontsize=14, fontweight='bold')
+
+    plt.tight_layout()
+
+    save_path = os.path.join(save_dir, f'example_{index:04d}_iou{iou:.3f}.png')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
+    plt.close()
+
+
+def save_comparison_grid(examples_dir, num_examples=9):
+    """Create a grid of saved examples for quick overview."""
+    import matplotlib.pyplot as plt
+    import matplotlib.image as mpimg
+    import glob
+
+    example_files = sorted(glob.glob(os.path.join(examples_dir, 'example_*.png')))
+
+    if len(example_files) == 0:
+        return
+
+    example_files = example_files[:num_examples]
+
+    n_cols = 3
+    n_rows = (len(example_files) + n_cols - 1) // n_cols
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5 * n_rows))
+
+    if n_rows == 1:
+        axes = axes.reshape(1, -1)
+
+    for idx, img_path in enumerate(example_files):
+        row = idx // n_cols
+        col = idx % n_cols
+
+        img = mpimg.imread(img_path)
+        axes[row, col].imshow(img)
+        axes[row, col].axis('off')
+
+    for idx in range(len(example_files), n_rows * n_cols):
+        row = idx // n_cols
+        col = idx % n_cols
+        axes[row, col].axis('off')
+
+    plt.tight_layout()
+    grid_path = os.path.join(examples_dir, 'examples_grid.png')
+    plt.savefig(grid_path, dpi=150, bbox_inches='tight')
+    plt.close()
+
+    print(f"Saved example grid to: {grid_path}")
+
+
+if __name__ == "__main__":
+    test_thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    main(frame=4, epochs=99, test_thresholds=test_thresholds)

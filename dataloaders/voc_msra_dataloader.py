@@ -12,6 +12,7 @@ import skimage.morphology as sm
 from dataloaders import custom_transforms as tr
 from dataloaders import joint_transforms
 from torchvision import transforms
+from torchvision.transforms import InterpolationMode
 
 num_classes = 21
 ignore_label = 255
@@ -73,7 +74,7 @@ def make_voc_dataset(mode,root):
 
 
 class VOC(data.Dataset):
-	def __init__(self, mode, inputRes,  transform=None):
+	def __init__(self, mode, inputRes=(256,256),  transform=None):
 		self.imgs = make_voc_dataset(mode)
 		if len(self.imgs) == 0:
 			raise RuntimeError('Found 0 images, please check the data set')
@@ -114,6 +115,60 @@ class VOC(data.Dataset):
 		return len(self.imgs)
 
 
+class voc_msra_dataloadr_256(data.Dataset):
+    def __init__(self, msra_root, voc_root,
+                 joint_transform=None, transform=None, target_transform=None,
+                 force_size=(256, 256)):
+        self.imgs_msra = make_msra_dataset(msra_root)
+        self.imgs_voc  = make_voc_dataset('train', voc_root)
+        self.imgs = self.imgs_msra + self.imgs_voc
+
+        self.joint_transform = joint_transform
+        self.transform = transform
+        self.target_transform = target_transform
+        self.force_size = force_size  # (H,W)
+        self.msra_num = len(self.imgs_msra)
+
+        # Fallback per-item resize to 256 if transforms don’t already do it
+        self._resize_img   = transforms.Resize(self.force_size, interpolation=InterpolationMode.BILINEAR)
+        self._resize_mask  = transforms.Resize(self.force_size, interpolation=InterpolationMode.NEAREST)
+        self._to_tensor    = transforms.ToTensor()
+
+    def __getitem__(self, index):
+        img_path, gt_path = self.imgs[index]
+        img = Image.open(img_path).convert('RGB')
+        target = Image.open(gt_path).convert('L')
+
+        # --- joint transforms on PIL (no resize_ anywhere) ---
+        if self.joint_transform is not None:
+            img, target = self.joint_transform(img, target)
+
+        # --- enforce 256x256 BEFORE ToTensor ---
+        img    = self._resize_img(img)
+        target = self._resize_mask(target)
+
+        # --- individual transforms (optional) ---
+        if self.transform is not None:
+            img = self.transform(img)        # should include ToTensor+Normalize
+        else:
+            img = self._to_tensor(img)       # (3,256,256)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)  # tensor expected
+        else:
+            target = self._to_tensor(target)        # (1,256,256) in [0,1]
+
+        # binarize mask (if needed)
+        target = (target > 0.5).float()             # (1,256,256)
+
+        # DO NOT convert to NumPy here; keep tensors for collate + .to(device)
+        sample = {'images': img.contiguous(), 'gts': target.contiguous()}
+        return sample
+
+    def __len__(self):
+        return len(self.imgs)
+
+
 class voc_msra_dataloadr(data.Dataset):
     def __init__(self, msra_root, voc_root, joint_transform=None, transform=None, target_transform=None):
         self.imgs_msra = make_msra_dataset(msra_root)
@@ -141,6 +196,7 @@ class voc_msra_dataloadr(data.Dataset):
 
         target = target.numpy()  # optional, if your model expects NumPy
         sample = {'images': img, 'gts': target}
+
         return sample
 
     def __len__(self):

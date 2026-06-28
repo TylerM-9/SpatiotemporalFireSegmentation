@@ -1,0 +1,17 @@
+Segmentation Model Evaluation Results
+==================================================
+Model: STCNN_frame_RESNet4
+Epochs: 99
+Threshold: 0.1
+Dataset Size: 401 images
+--------------------------------------------------
+IoU (Foreground):       0.006382
+Mean IoU (All Classes): 0.051813
+  - Background IoU:     0.097245
+  - Foreground IoU:     0.006382
+Mean Pixel Accuracy:    0.102549
+Precision:              0.006383
+Recall:                 0.966869
+F1 Score:               0.012682
+Dice Score:             0.012654
+Dice Loss:              0.987346

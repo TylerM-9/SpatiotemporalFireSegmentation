@@ -1,0 +1,17 @@
+Segmentation Model Evaluation Results
+==================================================
+Model: Seg_Branch_SwinUNET_flame
+Epochs: 99
+Threshold: 0.2
+Dataset Size: 401 images
+--------------------------------------------------
+IoU (Foreground):       0.005956
+Mean IoU (All Classes): 0.009496
+  - Background IoU:     0.013035
+  - Foreground IoU:     0.005956
+Mean Pixel Accuracy:    0.018836
+Precision:              0.005957
+Recall:                 0.987963
+F1 Score:               0.011843
+Dice Score:             0.011816
+Dice Loss:              0.988184

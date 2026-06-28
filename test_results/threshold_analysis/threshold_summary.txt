@@ -1,0 +1,18 @@
+THRESHOLD ANALYSIS SUMMARY
+==================================================
+
+Average IoU scores by threshold:
+------------------------------
+Threshold	Avg IoU		Std Dev
+
+Most frequently best threshold: 0.6
+Average of best thresholds: 0.62
+
+Distribution of best thresholds:
+------------------------------
+0.4: 2 images
+0.5: 4 images
+0.6: 7 images
+0.7: 3 images
+0.8: 2 images
+0.9: 2 images

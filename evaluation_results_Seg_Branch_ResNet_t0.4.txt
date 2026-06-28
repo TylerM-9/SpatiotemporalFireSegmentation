@@ -1,0 +1,17 @@
+Segmentation Model Evaluation Results
+==================================================
+Model: Seg_Branch_ResNet
+Epochs: 99
+Threshold: 0.4
+Dataset Size: 401 images
+--------------------------------------------------
+IoU (Foreground):       0.005949
+Mean IoU (All Classes): 0.002975
+  - Background IoU:     0.000000
+  - Foreground IoU:     0.005949
+Mean Pixel Accuracy:    0.005949
+Precision:              0.005949
+Recall:                 1.000000
+F1 Score:               0.011828
+Dice Score:             0.011802
+Dice Loss:              0.988198

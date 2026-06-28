@@ -1,18 +1,74 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
     <list default="true" id="f14d2a56-2982-4a5f-8707-b7cd5b6b2ee9" name="Default" comment="">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.gitignore" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/README.md" afterPath="$PROJECT_DIR$/README.md" />
+      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.agent.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.edit.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/CBAM_SIG_TEST.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/CBAM_Sig.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DAVIS_TEST_SEG.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DEEPLABS_TEMPORAL_COMBINED.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/PPM_SIG.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/PPM_TEST_SIG.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/RES_PICTURE.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ResUNet_claude.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ResUNet_joint_new.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ResUNet_temporal_claude.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/STAT_SIG_TEST.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Segmentation_new_pictures.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/UNETST_TESTING.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/UNET_TRAINING_TEMP.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/claude_train_FNET.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/davis_flame_sig.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/debug.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deeplab_claude.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/Claude_Implementation.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/FDEU_net.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/ResUNet_new.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/SWIN.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/UNET_ST.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/UNet_models.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/UNet_new.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/deeplabs.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/deeplabs_temporal.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/swin_tiny_patch4_window7_224.pth" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/network/swish_UNet.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/new_stcnn_res_testing.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pictures_UNET.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pictures_davis.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/seg_only_sig_test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/segmentation-flame-train.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/segmentation_swin.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testing_deeplab.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/testing_general_segmentation.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/train_joint_new.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/train_segmentation_unet_gpt.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/two_options_joint_train.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/STCNN_VOS.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/STCNN_VOS.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ResT/models/rest.py" beforeDir="false" afterPath="$PROJECT_DIR$/ResT/models/rest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/counting_weights.py" beforeDir="false" afterPath="$PROJECT_DIR$/counting_weights.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dataloaders/FIRE_dataloader.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataloaders/FIRE_dataloader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dataloaders/voc_msra_dataloader.py" beforeDir="false" afterPath="$PROJECT_DIR$/dataloaders/voc_msra_dataloader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/network/MV2_try.py" beforeDir="false" afterPath="$PROJECT_DIR$/network/MV2_try.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/network/Swin_Unet/networks/swin_transformer_unet_skip_expand_decoder_sys.py" beforeDir="false" afterPath="$PROJECT_DIR$/network/Swin_Unet/networks/swin_transformer_unet_skip_expand_decoder_sys.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/network/joint_pred_seg.py" beforeDir="false" afterPath="$PROJECT_DIR$/network/joint_pred_seg.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/testing.py" beforeDir="false" afterPath="$PROJECT_DIR$/testing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/testing_general.py" beforeDir="false" afterPath="$PROJECT_DIR$/testing_general.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_JointModel.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_JointModel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_SegBranch.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_SegBranch.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/train_segmentation_MV2_apple.py" beforeDir="false" afterPath="$PROJECT_DIR$/train_segmentation_MV2_apple.py" afterDir="false" />
     </list>
-    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
-    <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file leaf-file-name="train_JointModel.py" pinned="false" current-in-tab="false">
@@ -173,13 +229,19 @@
       </list>
     </option>
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
   <component name="ProjectFrameBounds">
     <option name="x" value="-3" />
     <option name="y" value="31" />
     <option name="width" value="1926" />
     <option name="height" value="1052" />
   </component>
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectId" id="32icb8KMW911E0I28K7oDawQAaT" />
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1">
       <flattenPackages />
@@ -213,89 +275,84 @@
       <pane id="Scope" />
     </panes>
   </component>
-  <component name="PropertiesComponent">
-    <property name="settings.editor.selected.configurable" value="configurable.group.appearance" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../Pred_Seg" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.train_online_dream.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/r56x196/Fire-Detection-UAV-Aerial-Image-Classification-Segmentation-UnmannedAerialVehicle&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RdControllerToolWindowsLayoutState" isNewUi="true">
+    <layout>
+      <window_info id="Bookmarks" side_tool="true" />
+      <window_info id="Merge Requests" />
+      <window_info id="Backup and Sync History" />
+      <window_info id="Commit_Guest" show_stripe_button="false" />
+      <window_info id="Learn" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.04144385" visible="true" />
+      <window_info id="Commit" order="1" weight="0.20307167" />
+      <window_info id="Structure" order="2" side_tool="true" weight="0.25" />
+      <window_info id="AI Playground" order="3" sideWeight="0.9585562" side_tool="true" weight="0.31462586" />
+      <window_info id="Pull Requests" order="4" weight="0.098122865" />
+      <window_info anchor="bottom" id="Database Changes" />
+      <window_info anchor="bottom" id="TypeScript" />
+      <window_info anchor="bottom" id="GitHub Copilot MCP Log" />
+      <window_info anchor="bottom" id="TODO" />
+      <window_info anchor="bottom" id="File Transfer" />
+      <window_info anchor="bottom" id="HfCacheToolWindow" />
+      <window_info anchor="bottom" id="Version Control" order="0" />
+      <window_info anchor="bottom" id="Problems" order="1" />
+      <window_info anchor="bottom" id="Problems View" order="2" weight="0.25024015" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="3" visible="true" weight="0.28350514" />
+      <window_info anchor="bottom" id="Services" order="4" weight="0.16420665" />
+      <window_info anchor="bottom" id="Python Packages" order="5" weight="0.1" />
+      <window_info anchor="bottom" id="Python Console" order="6" weight="0.1" />
+      <window_info anchor="bottom" id="Debug" order="7" weight="0.2161815" />
+      <window_info anchor="bottom" id="Find" order="8" weight="0.25394613" />
+      <window_info anchor="right" id="Endpoints" />
+      <window_info anchor="right" id="documentation.v2" show_stripe_button="false" side_tool="true" />
+      <window_info anchor="right" id="Coverage" side_tool="true" />
+      <window_info anchor="right" id="SciView" />
+      <window_info anchor="right" id="Jupyter Variables" side_tool="true" />
+      <window_info anchor="right" content_ui="combo" id="Notifications" order="0" weight="0.25" />
+      <window_info anchor="right" id="AIAssistant" order="1" weight="0.25" />
+      <window_info anchor="right" id="Database" order="2" weight="0.25" />
+      <window_info anchor="right" id="Gradle" order="3" weight="0.25" />
+      <window_info anchor="right" id="Maven" order="4" weight="0.25" />
+      <window_info anchor="right" id="Plots" order="5" weight="0.1" />
+      <window_info anchor="right" id="GitHub Copilot Chat" order="6" weight="0.3020327" />
+      <window_info anchor="right" id="github.copilotToolWindow" order="7" weight="0.3298274" />
+    </layout>
   </component>
   <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$" />
-    </key>
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/network" />
+      <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/output/STCNN_frame_3" />
       <recent name="$PROJECT_DIR$/output" />
     </key>
-  </component>
-  <component name="RunDashboard">
-    <option name="ruleStates">
-      <list>
-        <RuleState>
-          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
-        </RuleState>
-        <RuleState>
-          <option name="name" value="StatusDashboardGroupingRule" />
-        </RuleState>
-      </list>
-    </option>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
   </component>
   <component name="RunManager" selected="Python.train_online_dream">
-    <configuration default="false" name="train_JointModel" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
+    <configuration name="davis_first_frame" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="STCNN_VOS" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_JointModel.py" />
-      <option name="PARAMETERS" value="--frame_nums 3" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <method />
-    </configuration>
-    <configuration default="false" name="train_FramePred" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="STCNN_VOS" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_FramePred.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <method />
-    </configuration>
-    <configuration default="false" name="train_SegBranch" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="STCNN_VOS" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_SegBranch.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <method />
-    </configuration>
-    <configuration default="false" name="davis_first_frame" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -306,14 +363,19 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="STCNN_VOS" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/davis_LucidDream.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
-      <method />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
-    <configuration default="false" name="train_online_dream" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="train_FramePred" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="STCNN_VOS" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
@@ -324,97 +386,127 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="STCNN_VOS" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_online_dream.py" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_FramePred.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
-      <method />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
-    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+    <configuration name="train_JointModel" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="STCNN_VOS" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_JointModel.py" />
+      <option name="PARAMETERS" value="--frame_nums 3" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="train_SegBranch" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="STCNN_VOS" />
-      <option name="SCRIPT_NAME" value="" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_SegBranch.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
-      <method />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
-    <configuration default="true" type="Tox" factoryName="Tox">
+    <configuration name="train_online_dream" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="STCNN_VOS" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
-      <envs />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="STCNN_VOS" />
-      <method />
-    </configuration>
-    <configuration default="true" type="tests" factoryName="Doctests">
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="STCNN_VOS" />
-      <option name="SCRIPT_NAME" value="" />
-      <option name="CLASS_NAME" value="" />
-      <option name="METHOD_NAME" value="" />
-      <option name="FOLDER_NAME" value="" />
-      <option name="TEST_TYPE" value="TEST_SCRIPT" />
-      <option name="PATTERN" value="" />
-      <option name="USE_PATTERN" value="false" />
-      <method />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/train_online_dream.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
     </configuration>
     <configuration default="true" type="tests" factoryName="py.test">
+      <module name="STCNN_VOS" />
+      <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
-      <envs />
       <option name="SDK_HOME" value="" />
       <option name="WORKING_DIRECTORY" value="" />
       <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <module name="STCNN_VOS" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="_new_keywords" value="&quot;&quot;" />
+      <option name="_new_parameters" value="&quot;&quot;" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
       <option name="_new_target" value="&quot;.&quot;" />
       <option name="_new_targetType" value="&quot;PATH&quot;" />
-      <method />
+      <method v="2" />
     </configuration>
-    <list size="5">
-      <item index="0" class="java.lang.String" itemvalue="Python.train_JointModel" />
-      <item index="1" class="java.lang.String" itemvalue="Python.train_FramePred" />
-      <item index="2" class="java.lang.String" itemvalue="Python.train_SegBranch" />
-      <item index="3" class="java.lang.String" itemvalue="Python.davis_first_frame" />
-      <item index="4" class="java.lang.String" itemvalue="Python.train_online_dream" />
+    <list>
+      <item itemvalue="Python.train_JointModel" />
+      <item itemvalue="Python.train_FramePred" />
+      <item itemvalue="Python.train_SegBranch" />
+      <item itemvalue="Python.davis_first_frame" />
+      <item itemvalue="Python.train_online_dream" />
     </list>
     <recent_temporary>
-      <list size="5">
-        <item index="0" class="java.lang.String" itemvalue="Python.davis_first_frame" />
-        <item index="1" class="java.lang.String" itemvalue="Python.train_SegBranch" />
-        <item index="2" class="java.lang.String" itemvalue="Python.train_FramePred" />
-        <item index="3" class="java.lang.String" itemvalue="Python.train_online_dream" />
-        <item index="4" class="java.lang.String" itemvalue="Python.train_JointModel" />
+      <list>
+        <item itemvalue="Python.train_online_dream" />
+        <item itemvalue="Python.davis_first_frame" />
+        <item itemvalue="Python.train_SegBranch" />
+        <item itemvalue="Python.train_FramePred" />
+        <item itemvalue="Python.train_JointModel" />
       </list>
     </recent_temporary>
   </component>
-  <component name="ShelveChangesManager" show_recycled="false">
-    <option name="remove_strategy" value="false" />
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-9c94529fcfe0-JavaScript-PY-252.26199.25" />
+        <option value="bundled-python-sdk-ac7cc7082f2d-c6efb3732140-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-252.26199.25" />
+      </set>
+    </attachedChunks>
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
@@ -423,6 +515,13 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1551154433786</updated>
+      <workItem from="1757906905170" duration="1069000" />
+      <workItem from="1757907987626" duration="33594000" />
+      <workItem from="1758430686141" duration="50040000" />
+      <workItem from="1759767146154" duration="52526000" />
+      <workItem from="1761430469181" duration="14148000" />
+      <workItem from="1762724820425" duration="27253000" />
+      <workItem from="1767331104330" duration="19612000" />
     </task>
     <servers />
   </component>
@@ -450,6 +549,9 @@
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
     </layout>
   </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
   <component name="VcsContentAnnotationSettings">
     <option name="myLimit" value="2678400000" />
   </component>
@@ -461,10 +563,39 @@
           <line>644</line>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/dataloaders/custom_transforms.py</url>
+          <line>34</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/network/joint_pred_seg.py</url>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/train_JointModel.py</url>
+          <line>70</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/train_JointModel.py</url>
+          <line>72</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/Segmentation_new_pictures.py</url>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/CBAM_SIG_TEST.py</url>
+          <line>12</line>
+          <option name="timeStamp" value="9" />
+        </line-breakpoint>
       </breakpoints>
-      <option name="time" value="2" />
     </breakpoint-manager>
-    <watches-manager />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/STCNN$train_online_dream.coverage" NAME="train_online_dream Coverage Results" MODIFIED="1758596769206" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/train_FramePred.py">
@@ -574,7 +705,7 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/network/pred_seg.py" />
-    <entry file="file://$USER_HOME$/anaconda3/envs/pytorch0.4/lib/python2.7/site-packages/torch/serialization.py">
+    <entry file="file://$PROJECT_DIR$/../anaconda3/envs/pytorch0.4/lib/python2.7/site-packages/torch/serialization.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1302">
           <caret line="300" column="0" lean-forward="false" selection-start-line="300" selection-start-column="0" selection-end-line="300" selection-end-column="0" />

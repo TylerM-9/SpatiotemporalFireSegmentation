@@ -15,9 +15,9 @@ from torchvision import transforms, models
 from tensorboardX import SummaryWriter
 import imageio
 import matplotlib.pyplot as plt
+from torchvision.transforms import InterpolationMode
 
-from network.joint_pred_seg import SegBranch, SegEncoder, SegDecoder
-from network.MV2_try import SegEncoder_MobileViT2_Compat
+from network.UNet_models import ResUNet
 from dataloaders import joint_transforms, voc_msra_dataloader as db
 from mypath import Path
 
@@ -25,14 +25,14 @@ class TrainingConfig:
     def __init__(self):
         self.gpu_id = 0
         self.last_iter = 0
-        self.iter_num = 12000
+        self.iter_num = 3
         self.batch_size = 8
-        self.snapshot = 1000
+        self.snapshot = 5000
         self.lr = 1e-3
         self.wd = 5e-4
         self.lr_decay = 0.9
         self.side_weight = 0.5
-        self.model_name = 'Seg_Branch_CBAM'
+        self.model_name = 'Seg_Branch_ResNet'
 
 class Trainer:
     def __init__(self, config: TrainingConfig):
@@ -69,7 +69,6 @@ class Trainer:
 
     def _get_transforms(self):
         joint_transform = joint_transforms.Compose([
-            joint_transforms.RandomCrop(300),
             joint_transforms.RandomHorizontallyFlip(),
             joint_transforms.RandomRotate(10)
         ])
@@ -85,26 +84,23 @@ class Trainer:
 
     def _initialize_network(self):
         # Swap in MobileViT-v2 encoder; keep your decoder exactly as-is
-        encoder = SegEncoder_MobileViT2_Compat(
-            mv2_variant="mobilevitv2_100",   # or _075, _150, etc.
-            pretrained=True,                 # ImageNet-pretrained via timm
-            out_indices=(1, 2, 3, 4),        # 4 scales (≈ strides 4/8/16/32)
-            target_planes=(256, 512, 1024, 2048)  # match SegDecoderCBAM's expectations
-        )
-        decoder = SegDecoder()
-        return SegBranch(net_enc=encoder, net_dec=decoder)
-
-    def _initialize_encoder(self, net: SegEncoder):
-        print("Loading weights from PyTorch ResNet101")
-        resnet = models.resnet101(pretrained=True)
-        model_dict = net.state_dict()
-        model_dict.update(resnet.state_dict())
-        net.load_state_dict(model_dict, strict=False)
+        return ResUNet(in_channels=3, out_channels=1, init_features=16)
 
     def save_visualization(self, inputs, gts, pred, curr_iter: int):
-        inputs_np = self._prepare_input_visualization(inputs[0])
-        gt_np = self._prepare_gt_visualization(gts[0])
-        pred_np = self._prepare_pred_visualization(pred[-1][0])
+        # Convert input image back to original scale
+        inputs_np = (inputs[0].cpu().numpy().transpose(1, 2, 0) * np.array([0.229, 0.224, 0.225]) + np.array([0.485, 0.456, 0.406])) * 255
+        inputs_np = inputs_np.astype(np.uint8)
+
+        # Convert ground truth to binary image
+        gt_np = (gts[0].cpu().numpy() * 255).astype(np.uint8)
+        gt_np = gt_np.reshape(gt_np.shape[0], gt_np.shape[1], 1)
+        gt_np = np.repeat(gt_np, 3, axis=2)
+        
+
+        # Convert prediction to binary image
+        pred_np = (torch.sigmoid(pred[-1][0]).cpu().detach().numpy() > 0.5) * 255
+        pred_np = pred_np.astype(np.uint8)
+        pred_np = np.repeat(pred_np[np.newaxis, :, :], 3, axis=0).transpose(1, 2, 0)
         
         samples = np.concatenate((pred_np, gt_np, inputs_np), axis=0)
         samples = np.clip(samples, 0, 255).astype(np.uint8)
@@ -115,7 +111,7 @@ class Trainer:
 
     def train(self):
         joint_transform, img_transform, target_transform = self._get_transforms()
-        train_set = db.voc_msra_dataloadr(
+        train_set = db.voc_msra_dataloadr_256(
             Path.MSRAdataset_dir(),
             Path.VOC_dir(), 
             joint_transform, 
@@ -147,20 +143,52 @@ class Trainer:
                 curr_iter
             )
 
-        self._plot_loss_curve()
+        # Plot and save the loss curve
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.loss_values, label='Training Loss')
+        plt.xlabel('Iterations (x10)')
+        plt.ylabel('Loss')
+        plt.title('Training Loss Over Time')
+        plt.legend()
+        plt.grid(True)
+        
+        # Save the plot
+        loss_plot_path = os.path.join(self.save_dirs['model_dir'], 'loss_curve.png')
+        plt.savefig(loss_plot_path)
+        plt.close()
+
+    def _setup_optimizer(self, net):
+        return optim.SGD(net.parameters(), lr=self.config.lr, momentum=0.9, weight_decay=self.config.wd)
 
     def _train_epoch(self, train_loader, net, criterion, optimizer, curr_iter):
         start_time = timeit.default_timer()
         
         for sample_batched in train_loader:
-            curr_iter = self._train_iteration(
-                sample_batched, 
-                net, 
-                criterion, 
-                optimizer, 
-                curr_iter, 
-                start_time
-            )
+            inputs, gts = sample_batched['images'], sample_batched['gts']
+            inputs, gts = inputs.to(self.device), gts.to(self.device)
+            
+            optimizer.zero_grad()
+
+            pred = net(inputs)  # (B,1,256,256)
+            gts = gts.float()  # BCE expects float targets
+            loss = criterion(pred, gts)
+
+            loss.backward()
+            optimizer.step()
+            
+            # Log training info
+            if curr_iter % 10 == 0:
+                print(f'Iter: {curr_iter}, Loss: {loss.item():.4f}')
+                self.loss_values.append(loss.item())
+                
+            # Save checkpoint
+            if curr_iter % self.config.snapshot == 0:
+                torch.save({
+                    'iter': curr_iter,
+                    'state_dict': net.state_dict(),
+                }, os.path.join(self.save_dirs['model_dir'], f'iter_{curr_iter}.pth'))
+                
+            curr_iter += 1
             
             if curr_iter >= self.config.iter_num:
                 break

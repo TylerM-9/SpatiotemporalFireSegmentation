@@ -1,0 +1,15 @@
+STCNN Model Evaluation Results
+==================================================
+Model: STCNN_frame_FAN4
+Epochs: 174
+Frames: 4
+Threshold: 0.5
+Dataset Size: 197 images
+--------------------------------------------------
+IoU (Foreground):     0.412769
+Mean IoU (All Classes): 0.697555
+  - Background IoU:   0.982342
+  - Foreground IoU:   0.412769
+Mean Pixel Accuracy:  0.982389
+Dice Score:          0.531479
+Dice Loss:           0.468521
