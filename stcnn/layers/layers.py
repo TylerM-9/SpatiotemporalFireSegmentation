@@ -2,8 +2,12 @@ from __future__ import division
 
 import numpy as np
 from PIL import Image
-import pydensecrf.densecrf as dcrf
-from pydensecrf.utils import unary_from_labels
+try:
+    import pydensecrf.densecrf as dcrf
+    from pydensecrf.utils import unary_from_labels
+except ImportError:
+    dcrf = None
+    unary_from_labels = None
 
 import torch
 from torch.autograd import Variable

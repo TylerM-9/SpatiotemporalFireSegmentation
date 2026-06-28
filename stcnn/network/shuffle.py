@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 
-from torchinfo import summary
+try:
+    from torchinfo import summary
+except ImportError:
+    summary = None
 
 
 class ShuffleV2Block(nn.Module):
