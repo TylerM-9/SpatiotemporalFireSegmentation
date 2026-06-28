@@ -1,24 +1,23 @@
-# STCNN
-Spatiotemporal CNN for Video Object Segmentation
+# STCNN-FIRE
 
+Spatio-Temporal CNN for fire segmentation in video sequences.
 
-This file is under construction.
+## Quick start
 
-## Dependencies
-* python2.7
-* Pytorch0.4.0
+Everything you need to train and evaluate is in [`stcnn/`](stcnn/):
 
-
-## Training the joint model
-Adjust the correct path in mypath.py
 ```bash
-python train_JointModel.py
+cd stcnn/
+pip install -r requirements.txt
+python train.py --dataset fire --frame_nums 4
+python test.py
 ```
-## Onling training and testing
 
-```bash
-python davis_LucidDream.py
+See [`stcnn/README.md`](stcnn/README.md) for full setup, dataset structure, and architecture details.
+
+## Repository layout
+
 ```
-```bash
-python train_online_dream.py
+stcnn/        ← self-contained: model, training, evaluation, dataloaders
+findings/     ← experimental scripts, ablation results, earlier architectures
 ```

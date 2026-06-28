@@ -1,2 +1,25 @@
 models/
 output/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Checkpoints / model weights
+*.pth
+*.pkl
+*.h5
+
+# Logs
+runs/
+*.log
