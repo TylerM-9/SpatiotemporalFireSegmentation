@@ -15,7 +15,7 @@ This directory contains experimental scripts, intermediate results, and alternat
 
 ## Main Code
 
-The production-ready code lives in the **root** of this repository:
-- `train.py` — training script
-- `test.py` — evaluation script
-- `network/UNET_ST.py` — core model architecture
+The production-ready code lives in [`../stcnn/`](../stcnn/):
+- `stcnn/train.py` — training script
+- `stcnn/test.py` — evaluation script
+- `stcnn/network/UNET_ST.py` — core model architecture
