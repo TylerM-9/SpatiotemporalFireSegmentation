@@ -87,7 +87,7 @@ def main(args):
     # Discriminator (for temporal NetG supervision)
     netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
     initialize_netD(netD, os.path.join(
-        '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+        '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
         'NetD_epoch-99.pth'))
 
     # Temporal prediction branch (pretrained)
@@ -97,7 +97,7 @@ def main(args):
     print("Loading weights from pretrained NetG")
     pretrained_netG_dict = torch.load(
         os.path.join(
-            '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+            '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
             'NetG_epoch-99.pth'),
         map_location=device
     )
