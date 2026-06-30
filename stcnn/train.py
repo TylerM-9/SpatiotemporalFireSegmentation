@@ -146,7 +146,7 @@ def main(args):
             print("Continuing without pretrained segmentation weights")
     elif resume_epoch > 0:
         # Try to load from standard resume path
-        resume_path = os.path.join("/home/r56x196/STCNN/output/STUNET_UNET_DAVIS4/STUNET_UNET_DAVIS4-199.pth")
+        resume_path = os.path.join("/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output/STUNET_UNET_DAVIS4/STUNET_UNET_DAVIS4-199.pth")
         if os.path.exists(resume_path):
             print(f"Resuming from: {resume_path}")
             checkpoint = torch.load(resume_path, map_location=device)
@@ -223,7 +223,7 @@ def main(args):
         print("Loading DAVIS dataset for pretraining...")
         db_train = davis.DAVISDataset(
             inputRes=(256, 256),
-            samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
+            samples_list_file=os.path.join('/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/data/DAVIS16_samples_list.txt'),
             transform=composed_transforms,
             num_frame=num_frame
         )

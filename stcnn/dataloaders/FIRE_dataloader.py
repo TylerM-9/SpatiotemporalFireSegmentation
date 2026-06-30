@@ -17,8 +17,8 @@ from dataloaders import custom_transforms as tr
 class FIREDatasetGeneral(Dataset):
 	def __init__(self,
 				inputRes=None,
-				image_path="/home/r56x196/Data/archive-2/Image/Merged",
-				mask_path="/home/r56x196/Data/archive-2/Mask/Fire",
+				image_path="/home/c43n256/Data/archive-2/Image/Merged",
+				mask_path="/home/c43n256/Data/archive-2/Mask/Fire",
 				transform=None,
 				num_frame=4):
 		self.transform = transform
