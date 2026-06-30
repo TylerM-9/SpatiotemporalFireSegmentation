@@ -54,7 +54,7 @@ class DAVISDataset(Dataset):
 	"""DAVIS 2016 dataset constructed using the PyTorch built-in functionalities"""
 
 	def __init__(self, inputRes=None,
-				 samples_list_file='/home/xk/PycharmProjects/Pred_Seg/data/DAVIS16_samples_list.txt',
+				 samples_list_file='/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/data/DAVIS16_samples_list.txt',
 				 transform=None,
 				 num_frame=4):
 
@@ -131,7 +131,7 @@ class DAVISDataset(Dataset):
 class DAVIS_First_Frame_Dataset(Dataset):
 	def __init__(self, train=True,
 				 inputRes=None,
-				 db_root_dir='/home/xk/Dataset/DAVIS/',
+				 db_root_dir='/home/c43n256/Dataset/DAVIS/',
 				 transform=None,
 				 seq_name=None,
 				 frame_nums=4):
@@ -232,7 +232,7 @@ class DAVIS_First_Frame_Dataset(Dataset):
 class DAVIS_Online_Dataset(Dataset):
 	def __init__(self, train=True,
 				 inputRes=None,
-				 db_root_dir='/home/xk/Dataset/DAVIS/',
+				 db_root_dir='/home/c43n256/Dataset/DAVIS/',
 				 transform=None,
 				 seq_name=None,
 				 frame_nums=4):
