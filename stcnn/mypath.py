@@ -6,7 +6,7 @@ class Path(object):
 
     @staticmethod
     def save_root_dir():
-        return '/home/c43n256/REU2026/output'
+        return '/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output'
 
     @staticmethod
     def models_dir():
