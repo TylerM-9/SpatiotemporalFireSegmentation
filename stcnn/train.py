@@ -22,6 +22,7 @@ import torch.nn.functional as F
 
 # Use the clean ST-UNet architecture
 from network.UNET_ST import create_stunet_with_attention
+from network.STUNet3Plus import create_unet3plus
 from network.joint_pred_seg import FramePredDecoder, FramePredEncoder
 from network.googlenet import Inception3
 
@@ -63,8 +64,12 @@ def main(args):
 
     num_frame = args.frame_nums
     dataset_type = args.dataset  # 'davis' or 'fire'
+    model = args.model  # 'stunet' or 'stunet3plus'
 
-    modelName = f'STUNET_UNET_DAVIS_{dataset_type.upper()}{num_frame}'
+    if (model == "stunet"):
+        modelName = f'STUNET_UNET_DAVIS_{dataset_type.upper()}{num_frame}'
+    else:
+        modelName = f'STUNET3PLUS_DAVIS_{dataset_type.upper()}{num_frame}'
 
     save_dir = Path.save_root_dir()
     os.makedirs(save_dir, exist_ok=True)
@@ -115,14 +120,24 @@ def main(args):
     pred_dec.load_state_dict(model_dict)
     print("Temporal branch loaded successfully")
 
-    # ST-UNet (UNet encoder/decoder with attention)
-    print("Creating ST-UNet (UNet encoder/decoder) with temporal attention")
-    net = create_stunet_with_attention(
-        pred_enc=pred_enc,
-        pred_dec=pred_dec,
-        num_frame=num_frame,
-        n_classes=1
-    )
+    print("Building Spatio-Temporal Model...")
+    
+    # Select model based on flag
+    if model == "stunet3plus":
+        print("Initializing STUNet3Plus Architecture (UNet3+ Full-Scale Skip Connections)")
+        net = create_unet3plus(pred_enc=pred_enc, pred_dec=pred_dec, num_frame=num_frame, n_classes=1)
+    else:
+        print("Initializing Baseline ST-UNet Architecture")
+        net = create_stunet_with_attention(pred_enc=pred_enc, pred_dec=pred_dec, num_frame=num_frame, n_classes=1)
+
+    # # ST-UNet (UNet encoder/decoder with attention)
+    # print("Creating ST-UNet (UNet encoder/decoder) with temporal attention")
+    # net = create_stunet_with_attention(
+    #     pred_enc=pred_enc,
+    #     pred_dec=pred_dec,
+    #     num_frame=num_frame,
+    #     n_classes=1
+    # )
 
     total_params = sum(p.numel() for p in net.parameters())
     print(f"Total parameters: {total_params:,}")
@@ -146,7 +161,11 @@ def main(args):
             print("Continuing without pretrained segmentation weights")
     elif resume_epoch > 0:
         # Try to load from standard resume path
-        resume_path = os.path.join("/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output/STUNET_UNET_DAVIS4/STUNET_UNET_DAVIS4-199.pth")
+        if model == "stunet":
+            resume_path = os.path.join("/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output/STUNET_UNET_DAVIS4/STUNET_UNET_DAVIS4-199.pth")
+        else: 
+            resume_path = os.path.join("/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output/STUNET3PLUS_DAVIS4/STUNET3PLUS_DAVIS4-199.pth")
+
         if os.path.exists(resume_path):
             print(f"Resuming from: {resume_path}")
             checkpoint = torch.load(resume_path, map_location=device)
@@ -166,9 +185,15 @@ def main(args):
     # ------------------------------
     # TensorBoard
     # ------------------------------
-    log_dir = os.path.join(save_dir, 'STUNet_runs',
-                           datetime.now().strftime('%b%d_%H-%M-%S') + '_' + socket.gethostname())
-    writer = SummaryWriter(log_dir=log_dir, comment='-stunet')
+
+    if model == "stunet":
+        log_dir = os.path.join(save_dir, 'STUNet_runs',
+                                datetime.now().strftime('%b%d_%H-%M-%S') + '_' + socket.gethostname())
+        writer = SummaryWriter(log_dir=log_dir, comment='-stunet')
+    else:
+        log_dir = os.path.join(save_dir, 'STUNet3Plus_runs',
+                                datetime.now().strftime('%b%d_%H-%M-%S') + '_' + socket.gethostname())
+        writer = SummaryWriter(log_dir=log_dir, comment='-stunet3plus')
 
     net.to(device)
     netD.to(device)
@@ -536,6 +561,9 @@ def initialize_netD(netD, model_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train ST-UNet (UNet encoder/decoder + Attention)")
+
+    parser.add_argument("--model", type=str, default="stunet3plus", choices=["stunet", "stunet3plus"],
+                        help="Architecture choice for training pipeline: 'stunet' or 'stunet3plus'")
 
     parser.add_argument("--frame_nums", type=int, default=4,
                         help="Number of input frames (temporal branch)")
