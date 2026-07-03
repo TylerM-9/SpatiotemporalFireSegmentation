@@ -47,7 +47,7 @@ def main(args):
     # Settings
     # ------------------------------
     resume_epoch = args.resume_epoch
-    nEpochs = 201
+    nEpochs = nEpochs = args.epochs
     batch_size = 6
     snapshot = 5
 
@@ -561,6 +561,9 @@ def initialize_netD(netD, model_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train ST-UNet (UNet encoder/decoder + Attention)")
+
+    parser.add_argument("--epochs", type=int, default=201,
+                        help="Number of epochs to train (default: 201)")
 
     parser.add_argument("--model", type=str, default="stunet3plus", choices=["stunet", "stunet3plus"],
                         help="Architecture choice for training pipeline: 'stunet' or 'stunet3plus'")
