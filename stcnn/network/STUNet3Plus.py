@@ -279,10 +279,10 @@ class UNet3PlusDecoder(nn.Module):
 
         # Output convolution to merge concatenated states
         self.conv_d4 = DoubleConv(unet3plus_concat_channels, unet3plus_concat_channels)
-        
+
         if self.use_attention:
-            # Context Addition expects: in_channels (320), context_channels (e5/temporal = 512)
-            self.sta4 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=512, temporal_channels=512)
+            # d4 is H/8. It gets pred_feats[1], which has 256 channels.
+            self.sta4 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=256, temporal_channels=256)
         self.compress_d4 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
@@ -297,7 +297,8 @@ class UNet3PlusDecoder(nn.Module):
         self.conv_d3 = DoubleConv(unet3plus_concat_channels, unet3plus_concat_channels)
 
         if self.use_attention:
-            self.sta3 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=512, temporal_channels=512)
+            # d3 is H/4. It gets pred_feats[2], which has 64 channels.
+            self.sta3 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=64, temporal_channels=64)
         self.compress_d3 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
@@ -312,7 +313,8 @@ class UNet3PlusDecoder(nn.Module):
         self.conv_d2 = DoubleConv(unet3plus_concat_channels, unet3plus_concat_channels)
 
         if self.use_attention:
-            self.sta2 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=256, temporal_channels=256)
+            # d2 is H/2. We will upsample pred_feats[2] for it, so it is still 64 channels.
+            self.sta2 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=64, temporal_channels=64)
         self.compress_d2 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
@@ -352,7 +354,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention and temporal_features is not None and len(temporal_features) > 0:
             temp_feat = temporal_features[0]
-            prev_feat = prev_features[0] if prev_features is not None else torch.zeros_like(d4)
+            prev_feat = prev_features[0] if (prev_features is not None and len(prev_features) > 0) else torch.zeros_like(d4)
             _, d4 = self.sta4(x=d4, prev=prev_feat, temporal=temp_feat, context_high=temp_feat)
             attention_outputs.append(d4)
         
@@ -370,7 +372,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention and temporal_features is not None and len(temporal_features) > 1:
             temp_feat = temporal_features[1]
-            prev_feat = prev_features[1] if prev_features is not None else torch.zeros_like(d3)
+            prev_feat = prev_features[1] if (prev_features is not None and len(prev_features) > 1) else torch.zeros_like(d3)
             _, d3 = self.sta3(x=d3, prev=prev_feat, temporal=temp_feat, context_high=temp_feat)
             attention_outputs.append(d3)
             
@@ -387,7 +389,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention and temporal_features is not None and len(temporal_features) > 2:
             temp_feat = temporal_features[2]
-            prev_feat = prev_features[2] if prev_features is not None else torch.zeros_like(d2)
+            prev_feat = prev_features[2] if (prev_features is not None and len(prev_features) > 2) else torch.zeros_like(d2)
             _, d2 = self.sta2(x=d2, prev=prev_feat, temporal=temp_feat, context_high=temp_feat)
             attention_outputs.append(d2)
             
@@ -460,13 +462,21 @@ class STUNet3Plus(nn.Module):
         # Detach temporal features to isolate gradients
         pred_feats = [feat.detach() for feat in pred_de_feats]
 
-        # Classic UNet decoders output deep-to-shallow features (e.g., [16x16, 32x32, 64x64]).
-        # UNet3+ attention layers expect features matching d4 (32x32), d3 (64x64), and d2 (128x128).
-        # We slice or reorder to guarantee spatial alignment:
+        # pred_feats[1] -> H/8 (256ch) matches d4
+        # pred_feats[2] -> H/4 (64ch) matches d3
+        # d2 is H/2, but pred_feats ends at H/4. We must interpolate pred_feats[2] to match d2.
+        
+        feat_for_d2 = F.interpolate(
+            pred_feats[2], 
+            scale_factor=2, 
+            mode='bilinear', 
+            align_corners=False
+        )
+
         aligned_temporal_feats = [
-            pred_feats[1],  # Matches d4 scale (e.g., 32x32)
-            pred_feats[2],  # Matches d3 scale (e.g., 64x64)
-            pred_feats[3]   # Matches d2 scale (e.g., 128x128)
+            pred_feats[1],  # For d4 (H/8)
+            pred_feats[2],  # For d3 (H/4)
+            feat_for_d2     # For d2 (H/2)
         ]
 
         # === SPATIAL BRANCH ===
@@ -475,7 +485,8 @@ class STUNet3Plus(nn.Module):
         # Decode with properly aligned attention routing from the temporal branch
         seg_logits, attention_outs = self.seg_decoder(
             features=seg_en_feats, 
-            temporal_features=aligned_temporal_feats
+            temporal_features=aligned_temporal_feats,
+            prev_features=[]  # No previous features provided for attention
         )
 
         # Upsample logits to match target input resolution if needed
