@@ -47,7 +47,7 @@ def main(args):
     # Settings
     # ------------------------------
     resume_epoch = args.resume_epoch
-    nEpochs = nEpochs = args.epochs
+    nEpochs = args.epochs
     batch_size = 6
     snapshot = 5
 
