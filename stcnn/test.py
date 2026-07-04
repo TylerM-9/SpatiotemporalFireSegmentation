@@ -1,8 +1,9 @@
 """
-Testing script for ST-UNet with clean UNet architecture
-Adjusted to match the training script and network architecture
+Testing script for ST-UNet and ST-UNet3Plus
+Adjusted to match the training script and network architecture dynamically
 """
 
+import argparse
 import numpy as np
 import os
 from mypath import Path
@@ -11,34 +12,40 @@ from dataloaders import FIRE_dataloader as db
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
-# Import clean ST-UNet architecture
+# Import architectures
 from network.UNET_ST import create_stunet_with_attention
+from network.STUNet3Plus import create_unet3plus
 from network.joint_pred_seg import FramePredDecoder, FramePredEncoder
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-# UPDATE THESE PATHS
-model_path = "/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output/STUNET_UNET_DAVIS_FIRE4/STUNET_UNET_DAVIS_FIRE4-94.pth"
-model_name = "STUNET_UNET_FIRE4"
-
-
-def load_stunet_model(model_path, num_frame, device):
+def load_stunet_model(model_path, num_frame, model_choice, device):
     """
-    Load ST-UNet model from checkpoint
+    Load ST-UNet or ST-UNet3Plus model from checkpoint
     """
-    print(f"Loading ST-UNet model from: {model_path}")
+    print(f"Loading {model_choice} model from: {model_path}")
 
     # Initialize temporal branch components
     pred_enc = FramePredEncoder(frame_nums=num_frame)
     pred_dec = FramePredDecoder()
 
-    # Create ST-UNet architecture (same as training)
-    net = create_stunet_with_attention(
-        pred_enc=pred_enc,
-        pred_dec=pred_dec,
-        num_frame=num_frame,
-        n_classes=1
-    )
+    # Conditionally create architecture based on flag
+    if model_choice == "stunet3plus":
+        print(">>> Initializing ST-UNet3Plus Architecture (Full-Scale)")
+        net = create_unet3plus(
+            pred_enc=pred_enc,
+            pred_dec=pred_dec,
+            num_frame=num_frame,
+            n_classes=1
+        )
+    else:
+        print(">>> Initializing Baseline ST-UNet Architecture")
+        net = create_stunet_with_attention(
+            pred_enc=pred_enc,
+            pred_dec=pred_dec,
+            num_frame=num_frame,
+            n_classes=1
+        )
 
     # Load checkpoint
     if os.path.exists(model_path):
@@ -90,25 +97,29 @@ def load_stunet_model(model_path, num_frame, device):
     return net
 
 
-def main(frame, epochs, test_thresholds=None):
+def main(args):
     """
-    Main testing function for ST-UNet model
-
-    Args:
-        frame: Number of input frames
-        epochs: Epoch number (for naming)
-        test_thresholds: List of thresholds to test
+    Main testing function
     """
-    if test_thresholds is None:
-        test_thresholds = [0.5]  # Default threshold
+    test_thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
-    num_frame = frame
-    num_epochs = epochs
+    num_frame = args.frame_nums
+    dataset_type = args.dataset
+    model_choice = args.model
+    model_path = args.checkpoint
+
+    # Dynamically generate the model name to match how it was saved in train.py
+    if model_choice == "stunet3plus":
+        model_name = f'STUNET3PLUS_DAVIS_{dataset_type.upper()}{num_frame}'
+    else:
+        model_name = f'STUNET_UNET_DAVIS_{dataset_type.upper()}{num_frame}'
+
     save_dir = Path.save_root_dir()
     save_model_dir = os.path.join(save_dir, model_name)
+    os.makedirs(save_model_dir, exist_ok=True)
 
-    # Load ST-UNet model
-    model = load_stunet_model(model_path, num_frame, device)
+    # Load Model
+    model = load_stunet_model(model_path, num_frame, model_choice, device)
     if model is None:
         return
 
@@ -122,11 +133,15 @@ def main(frame, epochs, test_thresholds=None):
         model.eval()
 
         # Load test dataset
-        test_set = db.FIREDatasetRandom(
-            inputRes=(256, 256),
-            mode="test",
-            num_frame=num_frame
-        )
+        if dataset_type.lower() == 'fire':
+            test_set = db.FIREDatasetRandom(
+                inputRes=(256, 256),
+                mode="test",
+                num_frame=num_frame
+            )
+        else:
+            print("Testing is currently only configured for the FIRE dataset. Exiting.")
+            return
 
         testloader = DataLoader(
             test_set,
@@ -138,7 +153,13 @@ def main(frame, epochs, test_thresholds=None):
         print(f"Total dataset size: {len(testloader)} images")
 
         # Create examples directory
-        examples_dir = os.path.join(save_model_dir, f"examples_epoch{num_epochs}_t{threshold:.1f}")
+        # Extract the epoch number from the checkpoint name if possible
+        try:
+            epoch_str = os.path.basename(model_path).split('-')[-1].replace('.pth', '')
+            examples_dir = os.path.join(save_model_dir, f"examples_epoch{epoch_str}_t{threshold:.1f}")
+        except:
+            examples_dir = os.path.join(save_model_dir, f"examples_eval_t{threshold:.1f}")
+            
         os.makedirs(examples_dir, exist_ok=True)
         print(f"Saving example images to: {examples_dir}")
 
@@ -161,8 +182,7 @@ def main(frame, epochs, test_thresholds=None):
                 frames = sample_batched['frame'].to(device)
                 gts = sample_batched['seg_gt']
 
-                # Forward pass through ST-UNet
-                # Returns: ((seg_logits, attention_outs), pred_frame)
+                # Forward pass through architecture
                 seg_res, pred = model.forward(seqs, frames)
 
                 # Unpack segmentation result
@@ -251,13 +271,12 @@ def main(frame, epochs, test_thresholds=None):
             print("=" * 60)
 
             # Save results to file
-            results_file = os.path.join(save_model_dir, f"evaluation_results_t{threshold:.1f}.txt")
+            results_file = os.path.join(save_model_dir, f"evaluation_results_{model_choice}_t{threshold:.1f}.txt")
             with open(results_file, 'w') as f:
-                f.write("ST-UNet (Clean UNet) Segmentation Model Evaluation Results\n")
+                f.write(f"Segmentation Model Evaluation Results\n")
                 f.write("=" * 50 + "\n")
-                f.write(f"Model: {model_name}\n")
-                f.write(f"Architecture: UNet Encoder/Decoder + Attention\n")
-                f.write(f"Epochs: {num_epochs}\n")
+                f.write(f"Model File: {model_name}\n")
+                f.write(f"Architecture: {model_choice.upper()}\n")
                 f.write(f"Frames: {num_frame}\n")
                 f.write(f"Threshold: {threshold}\n")
                 f.write(f"Dataset Size: {processed_count} images\n")
@@ -464,6 +483,19 @@ def save_comparison_grid(examples_dir, num_examples=9):
 
 
 if __name__ == "__main__":
-    # Test with multiple thresholds
-    test_thresholds = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    main(frame=4, epochs=200, test_thresholds=test_thresholds)
+    parser = argparse.ArgumentParser(description="Test Spatio-Temporal Models (ST-UNet / ST-UNet3Plus)")
+
+    parser.add_argument("--model", type=str, required=True, choices=["stunet", "stunet3plus"],
+                        help="Architecture type selection: 'stunet' or 'stunet3plus'")
+
+    parser.add_argument("--checkpoint", type=str, required=True,
+                        help="Full path to the .pth model checkpoint file to test")
+
+    parser.add_argument("--dataset", type=str, default="fire", choices=["davis", "fire"],
+                        help="Dataset to use for testing (usually 'fire')")
+
+    parser.add_argument("--frame_nums", type=int, default=4,
+                        help="Number of input frames (temporal branch)")
+
+    args = parser.parse_args()
+    main(args)
