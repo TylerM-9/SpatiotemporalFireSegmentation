@@ -9,8 +9,10 @@ import argparse
 from ast import parse
 import os
 from datetime import datetime
+from random import random
 import socket
 import timeit
+import random
 
 from tensorboardX import SummaryWriter
 import torch
@@ -32,12 +34,35 @@ from dataloaders import DAVIS_dataloader as davis
 from dataloaders import FIRE_dataloader as db
 from mypath import Path
 
+
 # GPU
 gpu_id = 0
 device = torch.device("cuda:" + str(gpu_id) if torch.cuda.is_available() else "cpu")
 
+def seed_everything(seed=42):
+    """Sets random seeds for reproducibility"""
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    
+    # CuDNN backend determinism settings
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+def seed_worker(worker_id):
+    """Ensures multi-process data workers inherit the deterministic seed."""
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 def main(args):
+
+    # Set same seed of 42 for reproducibility
+    seed_everything(args.seed)
+
     # Select which GPU, -1 if CPU
     if torch.cuda.is_available():
         print(f"CUDA available, using GPU {gpu_id}: {torch.cuda.get_device_name(gpu_id)}")
@@ -583,6 +608,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--output_dir", type=str, default = "/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output",
                         help="Directory to save models and logs")
+    
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Random seed for reproducibility (default: 42)")
 
     args = parser.parse_args()
     main(args)
