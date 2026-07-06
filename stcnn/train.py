@@ -22,6 +22,7 @@ from torch.utils.data import DataLoader
 import torch.nn as nn
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
+import numpy as np
 
 # Use the clean ST-UNet architecture
 from network.UNET_ST import create_stunet_with_attention
