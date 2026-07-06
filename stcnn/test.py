@@ -12,6 +12,9 @@ from dataloaders import FIRE_dataloader as db
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
+from scipy.ndimage import binary_erosion
+from scipy.spatial import cKDTree
+
 # Import architectures
 from network.UNET_ST import create_stunet_with_attention
 from network.STUNet3Plus import create_unet3plus
@@ -167,6 +170,7 @@ def main(args):
         total_iou = 0
         total_pa = 0
         total_dice = 0
+        total_bf_score = 0
         total_precision = 0
         total_recall = 0
         per_class_iou = []
@@ -207,6 +211,7 @@ def main(args):
                 current_iou = iou_score(gt_sample, seg_pred, threshold)
                 current_pa = pixel_accuracy(gt_sample, seg_pred, threshold)
                 current_dice = dice_loss(gt_sample, seg_pred, threshold)
+                current_bf_score = BF_Score(gt_sample, seg_pred, threshold)
                 current_precision = precision_score(gt_sample, seg_pred, threshold)
                 current_recall = recall_score(gt_sample, seg_pred, threshold)
 
@@ -217,6 +222,7 @@ def main(args):
                 total_iou += current_iou
                 total_pa += current_pa
                 total_dice += current_dice
+                total_bf_score += current_bf_score
                 total_precision += current_precision
                 total_recall += current_recall
                 processed_count += 1
@@ -239,6 +245,7 @@ def main(args):
             mean_iou = total_iou / processed_count
             mean_pa = total_pa / processed_count
             mean_dice = total_dice / processed_count
+            mean_bf_score = total_bf_score / processed_count
             mean_precision = total_precision / processed_count
             mean_recall = total_recall / processed_count
 
@@ -268,6 +275,7 @@ def main(args):
             print(f"F1 Score:               {f1_score:.4f}")
             print(f"Dice Score:             {1 - mean_dice:.4f}")
             print(f"Dice Loss:              {mean_dice:.4f}")
+            print(f"Boundary F-Score:       {mean_bf_score:.4f}")
             print("=" * 60)
 
             # Save results to file
@@ -291,7 +299,7 @@ def main(args):
                 f.write(f"F1 Score:               {f1_score:.6f}\n")
                 f.write(f"Dice Score:             {1 - mean_dice:.6f}\n")
                 f.write(f"Dice Loss:              {mean_dice:.6f}\n")
-
+                f.write(f"Boundary F-Score:       {mean_bf_score:.6f}\n")
             print(f"Results saved to: {results_file}")
 
             # Save comparison grid
@@ -390,6 +398,53 @@ def dice_loss(y_true, y_pred, threshold=0.5, smooth=1e-6):
     dice_coef = (2. * intersection + smooth) / (y_true_bin.sum() + y_pred_bin.sum() + smooth)
 
     return 1 - dice_coef
+
+def get_boundary(mask_bin):
+    """Extract the boundary of a binary mask using binary erosion."""
+    if not mask_bin.any():
+        return np.empty((0, 2), dtype=int)
+
+    # Perform binary erosion
+    eroded = binary_erosion(mask_bin)
+
+    # Boundary is the difference between the original mask and the eroded mask
+    boundary = mask_bin & ~eroded
+
+    return np.argwhere(boundary)
+
+def BF_Score(y_true, y_pred, threshold=0.5, tolerance =2):
+    """
+    Calculate Boundary F Score (BF Score), measures sharpness of predicted boundaries
+    """
+    y_pred_bin = (y_pred > threshold).astype(np.uint8)
+    y_true_bin = (y_true > threshold).astype(np.uint8)
+
+    y_pred_bin = np.squeeze(y_pred_bin).astype(bool)
+    y_true_bin = np.squeeze(y_true_bin).astype(bool)
+
+    gt_boundary = get_boundary(y_true_bin)
+    pred_boundary = get_boundary(y_pred_bin)
+
+    if len(pred_boundary) == 0 and len (gt_boundary) == 0:
+        return {"bf_score": 1.0}   # both empty = perfect agreement
+
+    if len(pred_boundary) == 0 or len (gt_boundary) == 0:
+        return {"bf_score": 0.0}   # one empty = complete disagreement
+
+    
+    gt_tree = cKDTree(gt_boundary)
+    pred_tree = cKDTree(pred_boundary)
+
+    dist_pred_to_gt, _ = gt_tree.query(pred_boundary)
+    precision = np.mean(dist_pred_to_gt <= tolerance)
+
+    dist_gt_to_pred, _ = pred_tree.query(gt_boundary)
+    recall = np.mean(dist_gt_to_pred <= tolerance)
+
+    f_score = 0.0 if (precision + recall) == 0 else 2 * precision * recall / (precision + recall)
+
+    return f_score
+
 
 
 def save_example_image(input_img, gt_sample, seg_pred, index, iou, dice, precision, recall, save_dir, threshold):
