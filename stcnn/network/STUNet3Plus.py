@@ -282,7 +282,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention:
             # d4 is H/8. It gets pred_feats[1], which has 256 channels.
-            self.sta4 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=256, temporal_channels=256)
+            self.sta4 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=512, temporal_channels=256)
         self.compress_d4 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
@@ -298,7 +298,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention:
             # d3 is H/4. It gets pred_feats[2], which has 64 channels.
-            self.sta3 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=64, temporal_channels=64)
+            self.sta3 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=512, temporal_channels=64)
         self.compress_d3 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
@@ -314,7 +314,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention:
             # d2 is H/2. We will upsample pred_feats[2] for it, so it is still 64 channels.
-            self.sta2 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=64, temporal_channels=64)
+            self.sta2 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=512, temporal_channels=64)
         self.compress_d2 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
@@ -343,6 +343,8 @@ class UNet3PlusDecoder(nn.Module):
         # Level 5 is the bottleneck itself
         d5 = x5 
 
+        global_temporal_context = temporal_features[0] if (temporal_features is not None and len(temporal_features) > 0) else None
+
         # =================================================================
         # DECODER LEVEL 4
         # =================================================================
@@ -354,8 +356,8 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention and temporal_features is not None and len(temporal_features) > 0:
             temp_feat = temporal_features[0]
-            prev_feat = prev_features[0] if (prev_features is not None and len(prev_features) > 0) else torch.zeros_like(d4)
-            _, d4 = self.sta4(x=d4, prev=prev_feat, temporal=temp_feat, context_high=temp_feat)
+            prev_feat = torch.zeros_like(d4)
+            _, d4 = self.sta4(x=d4, prev=prev_feat, temporal=temp_feat, context_high=global_temporal_context)
             attention_outputs.append(d4)
         
         # Compress from 320 -> 64 channels so d3, d2, d1 blocks can ingest it
@@ -372,8 +374,8 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention and temporal_features is not None and len(temporal_features) > 1:
             temp_feat = temporal_features[1]
-            prev_feat = prev_features[1] if (prev_features is not None and len(prev_features) > 1) else torch.zeros_like(d3)
-            _, d3 = self.sta3(x=d3, prev=prev_feat, temporal=temp_feat, context_high=temp_feat)
+            prev_feat = d4
+            _, d3 = self.sta3(x=d3, prev=prev_feat, temporal=temp_feat, context_high=global_temporal_context)
             attention_outputs.append(d3)
             
         d3_compressed = self.compress_d3(d3)
@@ -389,8 +391,8 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention and temporal_features is not None and len(temporal_features) > 2:
             temp_feat = temporal_features[2]
-            prev_feat = prev_features[2] if (prev_features is not None and len(prev_features) > 2) else torch.zeros_like(d2)
-            _, d2 = self.sta2(x=d2, prev=prev_feat, temporal=temp_feat, context_high=temp_feat)
+            prev_feat = d3
+            _, d2 = self.sta2(x=d2, prev=prev_feat, temporal=temp_feat, context_high=global_temporal_context)
             attention_outputs.append(d2)
             
         d2_compressed = self.compress_d2(d2)
@@ -592,7 +594,6 @@ if __name__ == '__main__':
     print("Test 3: Advanced UNet3Plus with attention and temporal features")
     print("=" * 60)
     
-    # Matching your fixed decoder definitions:
     # sta4 expects context_channels=512, temporal_channels=512
     # sta3 expects context_channels=512, temporal_channels=512
     # sta2 expects context_channels=256, temporal_channels=256
@@ -602,8 +603,6 @@ if __name__ == '__main__':
         torch.randn(2, 256, 128, 128) # Target scale for Level 2 (d2) -> H/2, W/2
     ]
     
-    # We create matching mock prev_features inside the same channel dimension bounds 
-    # to avoid multiplication shape crashes inside SimpleContextAdd step 4
     prev_feats = [
         torch.randn(2, 320, 32, 32),   # Matches d4 output channel space (320)
         torch.randn(2, 320, 64, 64),   # Matches d3 output channel space (320)

@@ -80,7 +80,7 @@ def main(args):
     print(f"\n{'=' * 60}")
     print(f"Training Configuration:")
     print(f"  Dataset: {dataset_type.upper()}")
-    print(f"  Model: ST-UNet (UNet encoder/decoder + Attention)")
+    print(f"  Model: {model}")
     print(f"  Frames: {num_frame}")
     print(f"  Epochs: {nEpochs}")
     print(f"  Batch size: {batch_size}")
