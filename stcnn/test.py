@@ -485,7 +485,7 @@ def save_comparison_grid(examples_dir, num_examples=9):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test Spatio-Temporal Models (ST-UNet / ST-UNet3Plus)")
 
-    parser.add_argument("--model", type=str, required=True, choices=["stunet", "stunet3plus"],
+    parser.add_argument("--model", type=str, required=True, default="stunet3plus", choices=["stunet", "stunet3plus"],
                         help="Architecture type selection: 'stunet' or 'stunet3plus'")
 
     parser.add_argument("--checkpoint", type=str, required=True,

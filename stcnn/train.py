@@ -6,6 +6,7 @@ Uses UNet encoder/decoder with temporal attention from network/UNET_ST.py
 from __future__ import absolute_import, division, print_function
 
 import argparse
+from ast import parse
 import os
 from datetime import datetime
 import socket
@@ -71,7 +72,7 @@ def main(args):
     else:
         modelName = f'STUNET3PLUS_DAVIS_{dataset_type.upper()}{num_frame}'
 
-    save_dir = Path.save_root_dir()
+    save_dir = args.output_dir
     os.makedirs(save_dir, exist_ok=True)
     save_model_dir = os.path.join(save_dir, modelName)
     os.makedirs(save_model_dir, exist_ok=True)
@@ -579,6 +580,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--pretrained_seg", type=str, default=None,
                         help="Path to pretrained segmentation checkpoint")
+
+    parser.add_argument("--output_dir", type=str, default = "/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output",
+                        help="Directory to save models and logs")
 
     args = parser.parse_args()
     main(args)
