@@ -282,7 +282,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention:
             # d4 is H/8. It gets pred_feats[1], which has 256 channels.
-            self.sta4 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=512, temporal_channels=256)
+            self.sta4 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=256, temporal_channels=256)
         self.compress_d4 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
@@ -298,7 +298,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention:
             # d3 is H/4. It gets pred_feats[2], which has 64 channels.
-            self.sta3 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=512, temporal_channels=64)
+            self.sta3 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=256, temporal_channels=64)
         self.compress_d3 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
@@ -314,7 +314,7 @@ class UNet3PlusDecoder(nn.Module):
 
         if self.use_attention:
             # d2 is H/2. We will upsample pred_feats[2] for it, so it is still 64 channels.
-            self.sta2 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=512, temporal_channels=64)
+            self.sta2 = SimpleContextAdd(in_channels=unet3plus_concat_channels, context_channels=256, temporal_channels=64)
         self.compress_d2 = nn.Conv2d(unet3plus_concat_channels, target_ch, kernel_size=1, bias=False)
 
         # =================================================================
