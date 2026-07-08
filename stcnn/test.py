@@ -426,10 +426,10 @@ def BF_Score(y_true, y_pred, threshold=0.5, tolerance =2):
     pred_boundary = get_boundary(y_pred_bin)
 
     if len(pred_boundary) == 0 and len (gt_boundary) == 0:
-        return {"bf_score": 1.0}   # both empty = perfect agreement
+        return 1.0   # both empty = perfect agreement
 
     if len(pred_boundary) == 0 or len (gt_boundary) == 0:
-        return {"bf_score": 0.0}   # one empty = complete disagreement
+        return 0.0   # one empty = complete disagreement
 
     
     gt_tree = cKDTree(gt_boundary)
