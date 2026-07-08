@@ -53,12 +53,6 @@ def seed_everything(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def seed_worker(worker_id):
-    """Ensures multi-process data workers inherit the deterministic seed."""
-    worker_seed = torch.initial_seed() % 2**32
-    np.random.seed(worker_seed)
-    random.seed(worker_seed)
-
 def main(args):
 
     # Set same seed of 42 for reproducibility
@@ -587,7 +581,7 @@ def initialize_netD(netD, model_path):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train ST-UNet (UNet encoder/decoder + Attention)")
+    parser = argparse.ArgumentParser(description="Train ST-UNet or ST-Unet3+ for Spatio-Temporal Segmentation")
 
     parser.add_argument("--epochs", type=int, default=201,
                         help="Number of epochs to train (default: 201)")
