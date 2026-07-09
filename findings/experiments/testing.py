@@ -45,8 +45,8 @@ def main(frame, epochs):
 
     datasets = []
     # Updated: Use more flexible path construction
-    base_image_path = "/home/r56x196/Data/archive-2/Image"
-    base_mask_path = "/home/r56x196/Data/archive-2/Mask"
+    base_image_path = "/home/c43n256/Data/archive-2/Image"
+    base_mask_path = "/home/c43n256/Data/archive-2/Mask"
 
     for i in range(1, 18):
         image_path = os.path.join(base_image_path, f"split_{i}")

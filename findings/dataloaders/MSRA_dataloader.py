@@ -17,7 +17,7 @@ class MSRADataset(Dataset):
     """DAVIS 2016 dataset constructed using the PyTorch built-in functionalities"""
 
     def __init__(self, inputRes=None,
-                 dataset_dir='/home/xk/Dataset/MSRA10K_Imgs_GT/MSRA10K_Imgs_GT/Imgs/',
+                 dataset_dir='/home/c43n256/Dataset/MSRA10K_Imgs_GT/MSRA10K_Imgs_GT/Imgs/',
                  transform=None
                  ):
         self.images_list = sorted([f for f in os.listdir(dataset_dir) if f.endswith(".jpg")])

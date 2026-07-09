@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from network.joint_pred_seg import FramePredDecoder, FramePredEncoder, SegEncoder, JointSegDecoder, STCNN
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = "/home/r56x196/STCNN/output/STCNN_frame_NO_DAVIS4/STCNN_frame_NO_DAVIS4Flame-149.pth"
+model_path = "/home/c43n256/STCNN/output/STCNN_frame_NO_DAVIS4/STCNN_frame_NO_DAVIS4Flame-149.pth"
 model_name = "STCNN_frame_NO_DAVIS4"
 
 

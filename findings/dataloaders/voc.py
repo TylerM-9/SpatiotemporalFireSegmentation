@@ -14,7 +14,7 @@ from torchvision import transforms
 
 num_classes = 21
 ignore_label = 255
-root = '/home/xk/Dataset/VOC/'
+root = '/home/c43n256/Dataset/VOC/'
 
 '''
 color map

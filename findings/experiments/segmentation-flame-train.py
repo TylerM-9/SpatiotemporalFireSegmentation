@@ -129,7 +129,7 @@ class Trainer:
         net = FDEUnet()
 
         # Load pretrained weights if available
-        pretrained_path = "/home/r56x196/STCNN/output/Seg_Branch_FDEUnet/iter_50000.pth"
+        pretrained_path = "/home/c43n256/STCNN/output/Seg_Branch_FDEUnet/iter_50000.pth"
         if os.path.exists(pretrained_path):
             print("Loading weights from pretrained SegBranch")
             try:
@@ -545,7 +545,7 @@ class Trainer:
         net = FDEUnet()
 
         # Load pretrained weights if available
-        pretrained_path = "/home/r56x196/STCNN/output/Seg_Branch_FDEUnet/iter_50000.pth"
+        pretrained_path = "/home/c43n256/STCNN/output/Seg_Branch_FDEUnet/iter_50000.pth"
         if os.path.exists(pretrained_path):
             print("Loading weights from pretrained SegBranch")
             try:

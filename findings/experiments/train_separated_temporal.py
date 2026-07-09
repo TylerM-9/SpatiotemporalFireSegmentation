@@ -83,7 +83,7 @@ def main():
 
 		# Load checkpoint
 		checkpoint = torch.load(
-			"/home/r56x196/ondemand/data/sys/myjobs/projects/default/3/output/Seg_Branch/Seg_Branch_epoch-11999.pth",
+			"/home/c43n256/ondemand/data/sys/myjobs/projects/default/3/output/Seg_Branch/Seg_Branch_epoch-11999.pth",
 			map_location=torch.device('cpu')
 		)
 

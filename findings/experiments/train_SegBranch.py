@@ -99,7 +99,7 @@ def create_data_loaders(config, dataset_type='fire'):
 
         train_set = davis.DAVISDataset(
             inputRes=(256, 256),
-            samples_list_file='/home/r56x196/STCNN/data/DAVIS16_samples_list.txt',
+            samples_list_file='/home/c43n256/STCNN/data/DAVIS16_samples_list.txt',
             transform=composed_transforms,
             num_frame=1  # Use single frame for segmentation
         )
@@ -116,7 +116,7 @@ def create_data_loaders(config, dataset_type='fire'):
         print("Loading FIRE dataset...")
         train_set = db.FIREDataset(
             inputRes=(256, 256),
-            samples_path="/home/r56x196/Data/Mask_Data",
+            samples_path="/home/c43n256/Data/Mask_Data",
             transform=None,
             mode="train",
             num_frame=1
@@ -132,7 +132,7 @@ def create_data_loaders(config, dataset_type='fire'):
         if config.do_validation:
             val_set = db.FIREDataset(
                 inputRes=(256, 256),
-                samples_path="/home/r56x196/Data/Mask_Data",
+                samples_path="/home/c43n256/Data/Mask_Data",
                 transform=None,
                 mode="test",
                 num_frame=1

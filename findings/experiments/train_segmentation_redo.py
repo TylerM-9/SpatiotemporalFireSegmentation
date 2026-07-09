@@ -74,7 +74,7 @@ def main(args):
 		net = SegBranch(net_enc=seg_enc,net_dec=seg_dec)
 		print("Updationg weights from pretrained")
 		net.load_state_dict(
-			torch.load("/home/r56x196/STCNN/output/STCNN_frame_segmentation_only_noPPM4/STCNN_frame_segmentation_only_noPPM4Davis-99.pth",
+			torch.load("/home/c43n256/STCNN/output/STCNN_frame_segmentation_only_noPPM4/STCNN_frame_segmentation_only_noPPM4Davis-99.pth",
 					map_location=lambda storage, loc: storage))
 
 
@@ -108,7 +108,7 @@ def main(args):
 
 
 	
-	db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
+	db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join('/home/c43n256/STCNN/data/DAVIS16_samples_list.txt'),
 							transform=composed_transforms,num_frame=num_frame)
 	
 	trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
@@ -218,7 +218,7 @@ def initialize_netD(netD,model_path):
 def initialize_model( seg_enc, seg_dec,save_dir,num_frame=4):
 
 	print("Loading weights from pretrained SegBranch")  
-	pretrained_SegBranch_dict = torch.load("/home/r56x196/STCNN/output/Seg_Branch/Seg_Branch_epoch_fire_segmentation_only_noppm-11300.pth", map_location=torch.device(device))
+	pretrained_SegBranch_dict = torch.load("/home/c43n256/STCNN/output/Seg_Branch/Seg_Branch_epoch_fire_segmentation_only_noppm-11300.pth", map_location=torch.device(device))
 
 	# Load encoder weights
 	model_dict = seg_enc.state_dict()

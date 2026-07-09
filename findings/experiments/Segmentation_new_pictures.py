@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from network.joint_pred_seg import SegBranch, SegDecoder, SegEncoder
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = "/home/r56x196/STCNN/output/Seg_Branch_FIRE_with_validation/Seg_Branch_FIRE_with_validation_epoch-200.pth"
+model_path = "/home/c43n256/STCNN/output/Seg_Branch_FIRE_with_validation/Seg_Branch_FIRE_with_validation_epoch-200.pth"
 model_name = "Seg_Branch_FIRE_with_validation"
 
 
