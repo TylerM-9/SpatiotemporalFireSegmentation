@@ -532,8 +532,8 @@ def main(args):
     ax1.set_title(f"Training Loss - {modelName}")
     ax1.set_xlim(0, nEpochs)
     ax1.set_xticks(np.arange(0, nEpochs + 1, 20))
-    ax1.set_ylim(0.0, 1.0)
-    ax1.set_yticks(np.arange(0.0, 1.1, 0.1))
+    ax1.set_ylim(0.0, 0.4)
+    ax1.set_yticks(np.arange(0.0, 0.45, 0.05))
     ax1.legend()
     ax1.grid(True, linestyle='--', alpha=0.7)
 
