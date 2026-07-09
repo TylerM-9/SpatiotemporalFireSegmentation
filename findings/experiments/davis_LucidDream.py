@@ -13,7 +13,7 @@ for i in range(len(seqnames)):
 	seq_name = seqnames[i].strip().split(' ')[0]
 	mask = seqnames[i].strip().split(' ')[1]
 	print("Mask",mask)
-	dream_dir = os.path.join("/home/r56x196/Data",'dream')
+	dream_dir = os.path.join("/home/c43n256/Data",'dream')
 	if not os.path.exists(dream_dir):
 		print(dream_dir)
 		os.makedirs(os.path.join(dream_dir))
@@ -42,7 +42,7 @@ for i in range(len(seqnames)):
 
 	print(Iorg.shape, np.array(Morg).shape)
 	bg = paint(Iorg, np.array(Morg), False)
-	cv2.imwrite(os.path.join("/home/r56x196/Data/dream",'bg.jpg'), bg)
+	cv2.imwrite(os.path.join("/home/c43n256/Data/dream",'bg.jpg'), bg)
 	# bg = cv2.imread(os.path.join(save_path,'bg.jpg'))
 	for i in range(100):
 		im_1, gt_1, bb_1 = dreamData(Iorg, np.array(Morg), bg, False)

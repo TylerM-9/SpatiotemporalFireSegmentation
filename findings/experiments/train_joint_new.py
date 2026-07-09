@@ -62,9 +62,9 @@ class ModelConfig:
         self.save_dir = Path.save_root_dir()
         self.save_model_dir = os.path.join(self.save_dir, self.model_name)
         self.results_dir = os.path.join(self.save_dir, 'multi_round_results')
-        self.pretrained_netd_path = '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetD_epoch-99.pth'
-        self.pretrained_netg_path = '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetG_epoch-99.pth'
-        self.pretrained_seg_path = '/home/r56x196/STCNN/output/Seg_Branch_NEW_RUN/Seg_Branch_NEW_RUN_epoch-11999.pth'
+        self.pretrained_netd_path = '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetD_epoch-99.pth'
+        self.pretrained_netg_path = '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetG_epoch-99.pth'
+        self.pretrained_seg_path = '/home/c43n256/STCNN/output/Seg_Branch_NEW_RUN/Seg_Branch_NEW_RUN_epoch-11999.pth'
 
 
 class ModelInitializer:

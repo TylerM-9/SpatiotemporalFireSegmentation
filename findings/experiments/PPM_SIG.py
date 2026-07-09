@@ -103,9 +103,9 @@ class ModelConfig:
         self.results_dir = os.path.join(self.save_dir, 'multi_round_results', f'NoPPM_{phase}')
 
         # Pretrained paths (same as your file)
-        self.pretrained_netd_path = '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetD_epoch-99.pth'
-        self.pretrained_netg_path = '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetG_epoch-99.pth'
-        self.pretrained_seg_path = '/home/r56x196/STCNN/output/Seg_Branch_NEW_RUN/Seg_Branch_NEW_RUN_epoch-11999.pth'
+        self.pretrained_netd_path = '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetD_epoch-99.pth'
+        self.pretrained_netg_path = '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetG_epoch-99.pth'
+        self.pretrained_seg_path = '/home/c43n256/STCNN/output/Seg_Branch_NEW_RUN/Seg_Branch_NEW_RUN_epoch-11999.pth'
 
         # For FIRE phase when using davis pretrain (combined mode)
         self.davis_pretrained_path = None
@@ -268,7 +268,7 @@ def create_data_loaders(config, dataset_type='fire'):
         print("Loading DAVIS dataset for pretraining...")
         train_set = davis.DAVISDataset(
             inputRes=(256, 256),
-            samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
+            samples_list_file=os.path.join('/home/c43n256/STCNN/data/DAVIS16_samples_list.txt'),
             transform=composed_transforms,
             num_frame=config.num_frame
         )

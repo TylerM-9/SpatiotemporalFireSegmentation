@@ -90,8 +90,8 @@ def main():
     criterion = nn.BCEWithLogitsLoss().to(device)
 
     test_set = db.FIREDatasetSegmentation(inputRes=(400, 710),
-                                       image_path="/home/r56x196/Data/Mask_Data/Images/test",
-                                       mask_path="/home/r56x196/Data/Mask_Data/Masks/test",
+                                       image_path="/home/c43n256/Data/Mask_Data/Images/test",
+                                       mask_path="/home/c43n256/Data/Mask_Data/Masks/test",
                                        transform=transforms.ToTensor(),
                                        target_transform=transforms.ToTensor())
     test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
@@ -109,7 +109,7 @@ def main():
 
     # Load checkpoint
     checkpoint = torch.load(
-        "/home/r56x196/STCNN/output/Seg_Branch_CBAM/Seg_Branch_CBAM_epoch-11999.pth",
+        "/home/c43n256/STCNN/output/Seg_Branch_CBAM/Seg_Branch_CBAM_epoch-11999.pth",
         map_location=torch.device('cpu')
     )
 

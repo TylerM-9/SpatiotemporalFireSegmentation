@@ -64,7 +64,7 @@ def main(args):
     input_size = 256
 
     modelName = f'STDEEPLABV3PLUS_{backbone.upper()}_{dataset_type.upper()}{num_frame}'
-    resume_path_model = f'/home/r56x196/STCNN/output/STDEEPLABV3PLUS_{backbone.upper()}_{dataset_type.upper()}{num_frame}/STDEEPLABV3PLUS_{backbone.upper()}_{dataset_type.upper()}{num_frame}-199.pth'
+    resume_path_model = f'/home/c43n256/STCNN/output/STDEEPLABV3PLUS_{backbone.upper()}_{dataset_type.upper()}{num_frame}/STDEEPLABV3PLUS_{backbone.upper()}_{dataset_type.upper()}{num_frame}-199.pth'
 
     save_dir = Path.save_root_dir()
     if not os.path.exists(save_dir):
@@ -91,7 +91,7 @@ def main(args):
     # ============================================================================
     netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
     initialize_netD(netD, os.path.join(
-        '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+        '/home/c43n256/REU/FramePredModels/frame_nums_4',
         'NetD_epoch-99.pth'))
 
     pred_enc = FramePredEncoder(frame_nums=num_frame)
@@ -101,7 +101,7 @@ def main(args):
     print("Loading weights from pretrained NetG")
     pretrained_netG_dict = torch.load(
         os.path.join(
-            '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+            '/home/c43n256/REU/FramePredModels/frame_nums_4',
             'NetG_epoch-99.pth'),
         map_location=torch.device(device))
 
@@ -233,7 +233,7 @@ def main(args):
         print("Loading DAVIS dataset for pretraining...")
         db_train = davis.DAVISDataset(
             inputRes=(input_size, input_size),
-            samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
+            samples_list_file=os.path.join('/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/data/DAVIS16_samples_list.txt'),
             transform=composed_transforms,
             num_frame=num_frame
         )

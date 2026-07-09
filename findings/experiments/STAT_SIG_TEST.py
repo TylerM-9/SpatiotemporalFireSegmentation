@@ -24,7 +24,7 @@ from network.joint_pred_seg import (
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # UPDATE THESE PATHS - point to your trained model
-model_path = "/home/r56x196/STCNN/output/STCNN_frame_NO_DAVIS4_round2/STCNN_frame_NO_DAVIS4_round2_best.pth"
+model_path = "/home/c43n256/STCNN/output/STCNN_frame_NO_DAVIS4_round2/STCNN_frame_NO_DAVIS4_round2_best.pth"
 model_name = "STCNN_JointPredSeg"
 
 
