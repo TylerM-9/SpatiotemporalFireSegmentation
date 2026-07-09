@@ -530,8 +530,12 @@ def main(args):
     ax1.set_xlabel("Epochs")
     ax1.set_ylabel("Loss")
     ax1.set_title(f"Training Loss - {modelName}")
+    ax1.set_xlim(0, nEpochs)
+    ax1.set_xticks(np.arange(0, nEpochs + 1, 20))
+    ax1.set_ylim(0.0, 1.0)
+    ax1.set_yticks(np.arange(0.0, 1.1, 0.1))
     ax1.legend()
-    ax1.grid(True)
+    ax1.grid(True, linestyle='--', alpha=0.7)
 
     # val IoU
     if test_loader is not None and len(val_iou_list) > 0:
@@ -539,8 +543,12 @@ def main(args):
         ax2.set_xlabel("Epochs")
         ax2.set_ylabel("IoU")
         ax2.set_title(f"Validation IoU - {modelName}")
+        ax2.set_xlim(0, nEpochs)
+        ax2.set_xticks(np.arange(0, nEpochs + 1, 20))
+        ax2.set_ylim(0.0, 1.0)
+        ax2.set_yticks(np.arange(0.0, 1.1, 0.1))
         ax2.legend()
-        ax2.grid(True)
+        ax2.grid(True, linestyle='--', alpha=0.7)
 
     plt.tight_layout()
     plot_path = os.path.join(save_model_dir, f"training_curve_{modelName}.png")
