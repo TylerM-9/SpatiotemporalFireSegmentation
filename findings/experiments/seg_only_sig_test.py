@@ -32,7 +32,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # =========================
 # UPDATE THIS PATH
 # =========================
-model_path = "/home/c43n256/STCNN/output/SegBranch_FIRE_round2/SegBranch_FIRE_round2_best.pth"
+model_path = "/home/r56x196/STCNN/output/SegBranch_FIRE_round2/SegBranch_FIRE_round2_best.pth"
 model_name = "SegBranch_Test"
 
 
@@ -274,7 +274,7 @@ def main(epochs_tag=0, test_thresholds=None, out_dir_name=None):
     # FIRE test set (num_frame=1 like training)
     test_set = db.FIREDataset(
         inputRes=(256, 256),
-        samples_path="/home/c43n256/Data/Mask_Data",
+        samples_path="/home/r56x196/Data/Mask_Data",
         transform=None,
         mode="test",
         num_frame=1

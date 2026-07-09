@@ -18,7 +18,7 @@ from network.ResUNet_new import create_stcnn_with_attention, load_pretrained_stc
 from network.joint_pred_seg import FramePredDecoder, FramePredEncoder
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-model_path = "/home/c43n256/STCNN/output/STCNN_frame_RESUNETFIRE4/STCNN_frame_RESUNETFIRE4-199.pth"
+model_path = "/home/r56x196/STCNN/output/STCNN_frame_RESUNETFIRE4/STCNN_frame_RESUNETFIRE4-199.pth"
 model_name = "STCNN_frame_4_with_attention_RESUNET"
 
 

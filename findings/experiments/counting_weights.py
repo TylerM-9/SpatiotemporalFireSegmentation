@@ -177,4 +177,4 @@ Examples:
 
 
 if __name__ == "__main__":
-    remove_files_with_two_underscores('/home/c43n256/Data/Mask_Data/Masks/combined', dry_run=False)
+    remove_files_with_two_underscores('/home/r56x196/Data/Mask_Data/Masks/combined', dry_run=False)

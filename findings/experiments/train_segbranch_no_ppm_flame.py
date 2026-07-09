@@ -68,8 +68,8 @@ def main():
 
 
     test_set = db.FIREDatasetSegmentation(inputRes=(400, 710),
-                                    image_path="/home/c43n256/Data/Mask_Data/Images/test",
-                                    mask_path="/home/c43n256/Data/Mask_Data/Masks/test",
+                                    image_path="/home/r56x196/Data/Mask_Data/Images/test",
+                                    mask_path="/home/r56x196/Data/Mask_Data/Masks/test",
                                     transform=transforms.ToTensor(),
                                     target_transform=transforms.ToTensor())
     test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
@@ -86,7 +86,7 @@ def main():
         ], momentum=0.9)
 
 
-    net.load_state_dict(torch.load("/home/c43n256/STCNN/output/Seg_Branch_DAVIS/Seg_Branch_DAVIS_epoch_fire_segmentation_only_redo-50100.pth", map_location=torch.device('cpu')))
+    net.load_state_dict(torch.load("/home/r56x196/STCNN/output/Seg_Branch_DAVIS/Seg_Branch_DAVIS_epoch_fire_segmentation_only_redo-50100.pth", map_location=torch.device('cpu')))
 
     curr_iter = 0
 

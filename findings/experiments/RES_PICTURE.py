@@ -16,7 +16,7 @@ import segmentation_models_pytorch as smp
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # UPDATE THESE PATHS
-model_path = "/home/c43n256/STCNN/output/ResUNet_FineTuned/epoch_0201.pth"
+model_path = "/home/r56x196/STCNN/output/ResUNet_FineTuned/epoch_0201.pth"
 model_name = "ResUNet_FineTuned"
 
 # ResUNet Configuration (must match training)

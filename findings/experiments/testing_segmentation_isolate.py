@@ -29,14 +29,14 @@ def main(frame, epochs):
     net = SegBranch(net_enc=seg_enc,net_dec=seg_dec)
     print("Updationg weights from pretrained")
     net.load_state_dict(
-        torch.load("/home/c43n256/STCNN/output/STCNN_frame_segmentation_only_full4/STCNN_frame_segmentation_only_full4Flame-100.pth",
+        torch.load("/home/r56x196/STCNN/output/STCNN_frame_segmentation_only_full4/STCNN_frame_segmentation_only_full4Flame-100.pth",
                 map_location=lambda storage, loc: storage))
 
     available_splits = 17
     general_test_set = []
     for i in range(1, available_splits+1):
-        general_test_set.append(db.FIREDatasetGeneral(inputRes=(400,710), image_path=f"/home/c43n256/Data/archive-2/Image/split_{i}",
-        mask_path=f"/home/c43n256/Data/archive-2/Mask/split_{i}",num_frame=num_frame))
+        general_test_set.append(db.FIREDatasetGeneral(inputRes=(400,710), image_path=f"/home/r56x196/Data/archive-2/Image/split_{i}",
+        mask_path=f"/home/r56x196/Data/archive-2/Mask/split_{i}",num_frame=num_frame))
 
     test_set = ConcatDataset(general_test_set)
     test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=False)

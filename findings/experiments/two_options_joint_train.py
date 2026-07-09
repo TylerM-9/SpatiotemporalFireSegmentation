@@ -58,7 +58,7 @@ def main(args):
     dataset_type = args.dataset  # 'davis' or 'fire'
 
     modelName = f'STCNN_frame_RESUNET{dataset_type.upper()}{num_frame}'
-    resume_path_model = '/home/c43n256/STCNN/output/STCNN_frame_RESUNETDAVIS4/STCNN_frame_RESUNETDAVIS4-199.pth'
+    resume_path_model = '/home/r56x196/STCNN/output/STCNN_frame_RESUNETDAVIS4/STCNN_frame_RESUNETDAVIS4-199.pth'
 
     save_dir = Path.save_root_dir()
     if not os.path.exists(save_dir):
@@ -82,7 +82,7 @@ def main(args):
     # ============================================================================
     netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
     initialize_netD(netD, os.path.join(
-        '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+        '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
         'NetD_epoch-99.pth'))
 
     pred_enc = FramePredEncoder(frame_nums=num_frame)
@@ -93,7 +93,7 @@ def main(args):
         print("Loading weights from pretrained NetG")
         pretrained_netG_dict = torch.load(
             os.path.join(
-                '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+                '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
                 'NetG_epoch-99.pth'),
             map_location=torch.device(device))
 
@@ -182,7 +182,7 @@ def main(args):
         print("Loading DAVIS dataset for pretraining...")
         db_train = davis.DAVISDataset(
             inputRes=(256, 256),
-            samples_list_file=os.path.join('/home/c43n256/STCNN/data/DAVIS16_samples_list.txt'),
+            samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
             transform=composed_transforms,
             num_frame=num_frame
         )

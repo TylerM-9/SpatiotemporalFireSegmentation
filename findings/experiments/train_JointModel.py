@@ -78,7 +78,7 @@ def main(args):
     netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
     # Do not have a pre-trained discriminator
     initialize_netD(netD, os.path.join(
-        '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+        '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
         'NetD_epoch-99.pth'))
     pred_enc = FramePredEncoder(frame_nums=num_frame)
     pred_dec = FramePredDecoder()
@@ -88,7 +88,7 @@ def main(args):
         print("Loading weights from pretrained NetG")
         pretrained_netG_dict = torch.load(
             os.path.join(
-                '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+                '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
                 'NetG_epoch-99.pth'), map_location=torch.device(device))
 
         # Load pred_enc weights
@@ -132,7 +132,7 @@ def main(args):
         print("Updating weights from: {}".format(
             os.path.join('./output', modelName + '_epoch-' + str(resume_epoch - 1) + '.pth')))
         net.load_state_dict(
-            torch.load("/home/c43n256/STCNN/output/STCNN_frame_FAN4/STCNN_frame_FAN4Davis-99.pth",
+            torch.load("/home/r56x196/STCNN/output/STCNN_frame_FAN4/STCNN_frame_FAN4Davis-99.pth",
                        map_location=lambda storage, loc: storage))
 
     # Logging into Tensorboard
@@ -170,7 +170,7 @@ def main(args):
 
     # FIRE DATASET training
 
-    db_train = davis.DAVISDataset(inputRes=(256,256),samples_list_file=os.path.join('/home/c43n256/STCNN/data/DAVIS16_samples_list.txt'),
+    db_train = davis.DAVISDataset(inputRes=(256,256),samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),
     						   transform=composed_transforms,num_frame=num_frame)
 
     trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
@@ -400,7 +400,7 @@ def initialize_netD(netD, model_path):
 def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir, num_frame=4):
     print("Loading weights from pretrained NetG")
     pretrained_netG_dict = torch.load(
-        os.path.join('/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
+        os.path.join('/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4',
                      'NetG_epoch-99.pth'), map_location=torch.device(device))
 
     model_dict = pred_enc.state_dict()
@@ -419,7 +419,7 @@ def initialize_model(pred_enc, seg_enc, pred_dec, j_seg_dec, save_dir, num_frame
 
     print("Loading weights from pretrained SegBranch")
     pretrained_SegBranch_dict = torch.load(
-        "/home/c43n256/STCNN/output/Seg_Branch_NEW_RUN/Seg_Branch_NEW_RUN_epoch-11999.pth",
+        "/home/r56x196/STCNN/output/Seg_Branch_NEW_RUN/Seg_Branch_NEW_RUN_epoch-11999.pth",
         map_location=torch.device(device))
 
     # Load encoder weights

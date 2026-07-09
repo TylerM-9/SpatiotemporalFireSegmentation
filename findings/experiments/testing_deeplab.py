@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # UPDATE THESE PATHS
-model_path = "/home/c43n256/STCNN/output/DeepLabV3Plus_FineTuned/epoch_0201.pth"
+model_path = "/home/r56x196/STCNN/output/DeepLabV3Plus_FineTuned/epoch_0201.pth"
 model_name = "DeepLabV3Plus_FineTuned"
 
 # DeepLabV3+ Configuration (must match training)

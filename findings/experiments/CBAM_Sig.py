@@ -75,8 +75,8 @@ class ModelConfig:
         self.results_dir = os.path.join(self.save_dir, 'stcnn_cbam_multiround', phase)
 
         # Pretrained paths
-        self.pretrained_netd_path = '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetD_epoch-99.pth'
-        self.pretrained_netg_path = '/home/c43n256/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetG_epoch-99.pth'
+        self.pretrained_netd_path = '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetD_epoch-99.pth'
+        self.pretrained_netg_path = '/home/r56x196/ondemand/data/sys/myjobs/projects/default/4/output/FramePredModels/frame_nums_4/NetG_epoch-99.pth'
         # No pretrained segmentation path - will use ImageNet weights instead
 
         # For loading Davis pretrained weights
@@ -252,7 +252,7 @@ def create_data_loaders(config, dataset_type='fire'):
         print("Loading DAVIS dataset...")
         train_set = davis.DAVISDataset(
             inputRes=(256, 256),
-            samples_list_file='/home/c43n256/STCNN/data/DAVIS16_samples_list.txt',
+            samples_list_file='/home/r56x196/STCNN/data/DAVIS16_samples_list.txt',
             transform=composed_transforms,
             num_frame=config.num_frame
         )

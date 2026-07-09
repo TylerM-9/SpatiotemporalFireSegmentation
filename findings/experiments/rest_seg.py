@@ -74,7 +74,7 @@ def main():
 
 	encoder = rest_base()
 
-	state_dict = torch.load("/home/c43n256/Data/rest_base.pth", map_location=device)
+	state_dict = torch.load("/home/r56x196/Data/rest_base.pth", map_location=device)
 	# Initialize your model
 	model = rest_base()
 	# Load weights into the model

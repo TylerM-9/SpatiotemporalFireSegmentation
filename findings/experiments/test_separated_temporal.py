@@ -78,13 +78,13 @@ def main():
     print(f"Using device: {device}")
     
     test_set = FIREDatasetSegmentation(inputRes=(400, 710),
-                                       image_path="/home/c43n256/Data/Mask_Data/Images/test",
-                                       mask_path="/home/c43n256/Data/Mask_Data/Masks/test",
+                                       image_path="/home/r56x196/Data/Mask_Data/Images/test",
+                                       mask_path="/home/r56x196/Data/Mask_Data/Masks/test",
                                        transform=transforms.ToTensor(),
                                        target_transform=transforms.ToTensor())
     test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
     
-    model_path = "/home/c43n256/STCNN/output/Seg_Branch/Seg_Branch_epoch_fire_segmentation_only-{epochs}.pth"
+    model_path = "/home/r56x196/STCNN/output/Seg_Branch/Seg_Branch_epoch_fire_segmentation_only-{epochs}.pth"
     model = load_model(model_path, device)
     evaluate_model(test_loader, model, device)
 

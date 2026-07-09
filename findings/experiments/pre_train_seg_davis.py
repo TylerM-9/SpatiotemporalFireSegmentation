@@ -58,7 +58,7 @@ def main():
 											  tr.ScaleNRotate(rots=(-30, 30), scales=(0.75, 1.25))
 											  ])
     target_transform = transforms.ToTensor()
-    train_set = db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join('/home/c43n256/STCNN/data/DAVIS16_samples_list.txt'),transform=composed_transforms,num_frame=2)
+    train_set = db_train = db.DAVISDataset(inputRes=(400,710),samples_list_file=os.path.join('/home/r56x196/STCNN/data/DAVIS16_samples_list.txt'),transform=composed_transforms,num_frame=2)
     train_loader = DataLoader(train_set, batch_size=batch_size, num_workers=4, shuffle=True)
     criterion = nn.BCEWithLogitsLoss().to(device)
 
@@ -74,7 +74,7 @@ def main():
         ], momentum=0.9)
 
 
-    net.load_state_dict(torch.load(os.path.join('/home/c43n256/ondemand/data/sys/myjobs/projects/default/2/output/Seg_Branch','Seg_Branch_epoch-11999.pth'), map_location=torch.device('cpu')))
+    net.load_state_dict(torch.load(os.path.join('/home/r56x196/ondemand/data/sys/myjobs/projects/default/2/output/Seg_Branch','Seg_Branch_epoch-11999.pth'), map_location=torch.device('cpu')))
     
 
     curr_iter = 0

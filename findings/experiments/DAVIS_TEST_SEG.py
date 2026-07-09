@@ -38,7 +38,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # =========================
 # UPDATE THIS
 # =========================
-model_path = "/home/c43n256/STCNN/output/STCNN_FIRE4_round2/STCNN_FIRE4_round2_final.pth"
+model_path = "/home/r56x196/STCNN/output/STCNN_FIRE4_round2/STCNN_FIRE4_round2_final.pth"
 model_name = "STCNN_JointPredSeg"   # just for printing + folder naming
 
 
