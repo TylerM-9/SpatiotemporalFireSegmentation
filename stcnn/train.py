@@ -69,14 +69,14 @@ def main(args):
     # ------------------------------
     resume_epoch = args.resume_epoch
     nEpochs = args.epochs
-    batch_size = 6
+    batch_size = args.batch
     snapshot = 5
 
     # LRs / reg
     pred_lr = 1e-8       # Temporal branch stays frozen
-    seg_lr = 1e-4        # Main LR for segmentation branch
+    seg_lr = args.lr        # Main LR for segmentation branch
     lr_D = 1e-4
-    wd = 5e-4
+    wd = args.wd
     beta = 0.001
     margin = 0.3
 
@@ -614,6 +614,15 @@ if __name__ == "__main__":
     
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed for reproducibility (default: 42)")
+    
+    parser.add_argument("--lr", type=float, default=1e-4, 
+                        help="Learning rate for segmentation")
+    
+    parser.add_argument("--wd", type=float, default=5e-4, 
+                        help="Weight decay penalty")
+    
+    parser.add_argument("--batch", type=int, default=6,
+                        help="Batch size for training")
 
     args = parser.parse_args()
     main(args)
