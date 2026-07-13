@@ -40,6 +40,36 @@ from mypath import Path
 gpu_id = 0
 device = torch.device("cuda:" + str(gpu_id) if torch.cuda.is_available() else "cpu")
 
+class BCEDiceLoss(nn.Module):
+    def __init__(self, bce_weight=0.5, dice_weight=0.5, smooth=1e-6):
+        super(BCEDiceLoss, self).__init__()
+        self.bce_weight = bce_weight
+        self.dice_weight = dice_weight
+        self.smooth = smooth
+        # BCEWithLogitsLoss is numerically stable because it combines Sigmoid + BCE
+        self.bce = nn.BCEWithLogitsLoss()
+
+    def forward(self, inputs, targets):
+        # 1. Calculate BCE Loss (uses raw logits)
+        bce_loss = self.bce(inputs, targets)
+
+        # 2. Calculate Dice Loss (requires sigmoid probabilities)
+        inputs_sigmoid = torch.sigmoid(inputs)
+        
+        # Flatten tensors to 1D to easily calculate intersection and union
+        inputs_flat = inputs_sigmoid.view(-1)
+        targets_flat = targets.view(-1)
+
+        # Calculate intersection and Dice coefficient
+        intersection = (inputs_flat * targets_flat).sum()
+        dice_coef = (2. * intersection + self.smooth) / (inputs_flat.sum() + targets_flat.sum() + self.smooth)
+        dice_loss = 1.0 - dice_coef
+
+        # 3. Combine losses
+        combined_loss = (self.bce_weight * bce_loss) + (self.dice_weight * dice_loss)
+        
+        return combined_loss
+
 def seed_everything(seed=42):
     """Sets random seeds for reproducibility"""
     random.seed(seed)
@@ -151,15 +181,6 @@ def main(args):
         print("Initializing Baseline ST-UNet Architecture")
         net = create_stunet_with_attention(pred_enc=pred_enc, pred_dec=pred_dec, num_frame=num_frame, n_classes=1)
 
-    # # ST-UNet (UNet encoder/decoder with attention)
-    # print("Creating ST-UNet (UNet encoder/decoder) with temporal attention")
-    # net = create_stunet_with_attention(
-    #     pred_enc=pred_enc,
-    #     pred_dec=pred_dec,
-    #     num_frame=num_frame,
-    #     n_classes=1
-    # )
-
     total_params = sum(p.numel() for p in net.parameters())
     print(f"Total parameters: {total_params:,}")
 
@@ -232,7 +253,7 @@ def main(args):
     # ------------------------------
     lp_function = nn.MSELoss().to(device)
     criterion = nn.BCELoss().to(device)
-    seg_criterion = nn.BCEWithLogitsLoss().to(device)
+    seg_criterion = BCEDiceLoss(bce_weight=0.5, dice_weight=0.5)
 
     # ------------------------------
     # Optimizers
