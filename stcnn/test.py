@@ -133,6 +133,9 @@ def main(args):
         print(f"Testing with threshold: {threshold}")
         print(f"{'=' * 60}")
 
+        total_global_intersection = 0
+        total_global_union = 0
+
         model.eval()
 
         # Load test dataset
@@ -207,6 +210,17 @@ def main(args):
                 if gt_sample.max() > 1.0:
                     gt_sample = gt_sample / 255.0
 
+                preds_binary = (seg_pred > threshold).astype(np.float32)
+                targets_binary = gt_sample.astype(np.float32)
+
+                # Calculate intersection and union for this image
+                intersection = (preds_binary * targets_binary).sum()
+                union = preds_binary.sum() + targets_binary.sum() - intersection
+                
+                # Accumulate for the global metric
+                total_global_intersection += intersection
+                total_global_union += union
+
                 # Calculate metrics
                 current_iou = iou_score(gt_sample, seg_pred, threshold)
                 current_pa = pixel_accuracy(gt_sample, seg_pred, threshold)
@@ -266,6 +280,7 @@ def main(args):
             print(f"Threshold: {threshold}")
             print("-" * 40)
             print(f"IoU (Foreground):       {mean_iou:.4f}")
+            print(f"Global IoU (Foreground):{global_iou:.4f}")
             print(f"Mean IoU (All Classes): {mean_iou_classes:.4f}")
             print(f"  - Background IoU:     {mean_bg_iou:.4f}")
             print(f"  - Foreground IoU:     {mean_fg_iou:.4f}")
@@ -290,6 +305,7 @@ def main(args):
                 f.write(f"Dataset Size: {processed_count} images\n")
                 f.write("-" * 50 + "\n")
                 f.write(f"IoU (Foreground):       {mean_iou:.6f}\n")
+                f.write(f"Global IoU (Foreground):{global_iou:.4f}\n")
                 f.write(f"Mean IoU (All Classes): {mean_iou_classes:.6f}\n")
                 f.write(f"  - Background IoU:     {mean_bg_iou:.6f}\n")
                 f.write(f"  - Foreground IoU:     {mean_fg_iou:.6f}\n")

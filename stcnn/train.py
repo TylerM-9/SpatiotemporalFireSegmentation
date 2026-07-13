@@ -317,6 +317,9 @@ def main(args):
         num_batches = len(trainloader)
         start_time = timeit.default_timer()
 
+        total_global_intersection = 0
+        total_global_union = 0
+
         net.train()
 
         for ii, sample_batched in enumerate(trainloader):
@@ -462,6 +465,18 @@ def main(args):
                     iou = (intersection / (union + 1e-6)).item()
                     val_iou += iou
 
+                    preds_binary = (seg_res > 0.5).float()
+                    targets_binary = gts.float()
+
+                    intersection = (preds_binary * targets_binary).sum().item()
+                    union = preds_binary.sum().item() + targets_binary.sum().item() - intersection
+
+                    # Add to the global running tally
+                    total_global_intersection += intersection
+                    total_global_union += union
+
+            global_iou = total_global_intersection / (total_global_union + 1e-6)
+
             net.train()
 
             num_samples = len(test_loader)
@@ -470,7 +485,7 @@ def main(args):
             val_loss_list.append(avg_val_loss)
             val_iou_list.append(avg_val_iou)
 
-            print(f"Epoch [{epoch + 1}/{nEpochs}] - Avg Validation Loss: {avg_val_loss:.8f}, IoU: {avg_val_iou:.4f}")
+            print(f"Epoch [{epoch + 1}/{nEpochs}] - Avg Validation Loss: {avg_val_loss:.8f}, IoU: {avg_val_iou:.4f}, Global-IoU: {global_iou:.4f}")
 
             writer.add_scalar('Loss/Validation', avg_val_loss, epoch + 1)
             writer.add_scalar('IoU/Validation', avg_val_iou, epoch + 1)
