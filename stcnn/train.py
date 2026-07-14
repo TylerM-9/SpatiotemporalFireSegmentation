@@ -253,7 +253,7 @@ def main(args):
     # ------------------------------
     lp_function = nn.MSELoss().to(device)
     criterion = nn.BCELoss().to(device)
-    seg_criterion = BCEDiceLoss(bce_weight=0.5, dice_weight=0.5)
+    seg_criterion = BCEwithLogitsLoss().to(device)  # Use BCEWithLogitsLoss for numerical stability
 
     # ------------------------------
     # Optimizers

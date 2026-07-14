@@ -262,6 +262,7 @@ def main(args):
             mean_bf_score = total_bf_score / processed_count
             mean_precision = total_precision / processed_count
             mean_recall = total_recall / processed_count
+            global_iou = total_global_intersection / total_global_union if total_global_union > 0 else 0.0
 
             per_class_iou = np.array(per_class_iou)
             mean_bg_iou = np.mean(per_class_iou[:, 0])
