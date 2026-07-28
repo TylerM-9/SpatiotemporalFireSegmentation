@@ -1,6 +1,6 @@
-# ST-UNet: Spatio-Temporal UNet for Fire Segmentation
+# ST-UNet3+: Dual-Branch Spatiotemporal based on UNet3+ for Fire Segmentation
 
-A spatio-temporal segmentation network that combines a **UNet encoder/decoder** with a **temporal prediction branch** to detect and segment fire in video sequences.
+A spatiotemporal segmentation network that combines a **UNet3+ encoder/decoder** with a **temporal prediction branch** to detect and segment fire in video sequences.
 
 The key idea: a pretrained temporal branch processes previous frames to predict motion context, and an attention module (`SimpleContextAdd`) fuses this temporal signal into the spatial segmentation decoder at multiple scales.
 
@@ -8,9 +8,9 @@ The key idea: a pretrained temporal branch processes previous frames to predict 
 
 ## Architecture Overview
 
-```
-
 <img width="424" height="831" alt="workflow_pipeline_newerer" src="https://github.com/user-attachments/assets/97032f84-8086-4f9e-b44b-1b9f6bc6a7ef" />
+
+```
 
 ST-UNET3+ ARCHITECTURE GOES HERE
 
