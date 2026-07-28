@@ -9,18 +9,11 @@ The key idea: a pretrained temporal branch processes previous frames to predict 
 ## Architecture Overview
 
 ```
-Input: frame sequence [T frames] + current frame
-           |                          |
-   Temporal Branch                Spatial Branch
-   (FramePredEncoder)             (UNetEncoder)
-         |                              |
-   (FramePredDecoder)               [64, 128, 256, 512, 512]
-    pred_features                         |
-   [512, 256, 64]               UNetDecoder w/ SimpleContextAdd
-         |__________________________|
-                     |
-              Segmentation output
-                 [B, 1, H, W]
+
+<img width="424" height="831" alt="workflow_pipeline_newerer" src="https://github.com/user-attachments/assets/97032f84-8086-4f9e-b44b-1b9f6bc6a7ef" />
+
+ST-UNET3+ ARCHITECTURE GOES HERE
+
 ```
 
 The `SimpleContextAdd` attention module (in `network/UNET_ST.py`) integrates:
@@ -41,10 +34,11 @@ The `SimpleContextAdd` attention module (in `network/UNET_ST.py`) integrates:
 ├── metrics.py                 # Segmentation evaluation metrics
 │
 ├── network/
-│   ├── UNET_ST.py             # Core model: UNetEncoder, UNetDecoder, STUNet, SimpleContextAdd
-│   ├── joint_pred_seg.py      # Temporal branch: FramePredEncoder, FramePredDecoder
-│   ├── googlenet.py           # Inception-v3 discriminator (GAN training)
-│   └── shuffle.py             # ShuffleNetV2 blocks (used by temporal branch)
+│   ├── UNET_ST.py             # Baseline model: UNetEncoder, UNetDecoder, STUNet, SimpleContextAdd
+|   ├── STUnet3plus.py         # Proposed model: UNet3PlusEncoder, UNet3PlusDecoder, ST-UNet3+, SimpleContextAdd
+│   └── joint_pred_seg.py      # Temporal branch: FramePredEncoder, FramePredDecoder
+│
+│
 │
 ├── dataloaders/
 │   ├── FIRE_dataloader.py     # FIRE dataset loader (FIREDatasetRandom, FIREDataset, ...)
@@ -59,8 +53,7 @@ The `SimpleContextAdd` attention module (in `network/UNET_ST.py`) integrates:
 │   ├── DAVIS_seqs_list.txt
 │   └── VID_seqs_list.txt
 │
-├── requirements.txt
-└── findings/                  # Experimental scripts, ablation results, earlier architectures
+└── requirements.txt
 ```
 
 ---
@@ -70,8 +63,8 @@ The `SimpleContextAdd` attention module (in `network/UNET_ST.py`) integrates:
 **1. Clone and install dependencies**
 
 ```bash
-git clone https://github.com/BezboDima/STCNN_FIRE.git
-cd STCNN_FIRE/stcnn
+git clone https://github.com/TylerM-9/SpatiotemporalFireSegmentation.git
+cd SpatiotemporalFireSegmentation/stcnn
 pip install -r requirements.txt
 ```
 
@@ -120,7 +113,7 @@ DAVIS-2016:
 
 ## Pretrained Weights Required
 
-The temporal branch (`FramePredEncoder` / `FramePredDecoder`) must be initialized from pretrained frame-prediction weights before training the full ST-UNet.
+The temporal branch (`FramePredEncoder` / `FramePredDecoder`) must be initialized from pretrained frame-prediction weights before training the full ST-UNet and ST-UNet3+.
 
 Update the paths in `train.py` (lines 91–103):
 ```python
@@ -154,10 +147,17 @@ python train.py --dataset fire --frame_nums 4 --pretrained_seg /path/to/checkpoi
 
 | Argument | Default | Description |
 |---|---|---|
-| `--dataset` | `fire` | `fire` (train+val) or `davis` (train only) |
+| `--epochs` | `201` | Number of epochs to train |
+| `--model` | `stunet3plus` | Architecture choice: `stunet` or `stunet3plus` |
 | `--frame_nums` | `4` | Number of temporal context frames |
+| `--dataset` | `fire` | `fire` (train+val) or `davis` (train only) |
 | `--resume_epoch` | `0` | Epoch to resume from (0 = fresh start) |
 | `--pretrained_seg` | `None` | Path to pretrained segmentation checkpoint |
+| `--output_dir` | `/home/.../output` | Directory to save models and logs |
+| `--seed` | `42` | Random seed for reproducibility |
+| `--lr` | `1e-4` | Learning rate for segmentation |
+| `--wd` | `5e-4` | Weight decay penalty |
+| `--batch` | `6` | Batch size for training |
 
 Checkpoints are saved every 5 epochs to `{save_root_dir}/{model_name}/`.
 
@@ -187,9 +187,7 @@ Results are saved as `.txt` files and example visualizations (input | ground tru
 
 ---
 
-## Core Module: `network/UNET_ST.py`
-
-The file contains all building blocks researchers may want to extend:
+## Baseline ST-UNet Module: `network/UNET_ST.py`
 
 | Class / Function | Description |
 |---|---|
@@ -200,26 +198,26 @@ The file contains all building blocks researchers may want to extend:
 | `UNetEncoder` | 4-stage UNet encoder (64→128→256→512→512) |
 | `UNetDecoder` | 4-stage decoder with `SimpleContextAdd` at stages 1-3 |
 | `UNet` | Standalone UNet (no temporal branch) |
-| `STUNet` | Full spatio-temporal model |
+| `STUNet` | Full baseline spatiotemporal model |
 | `create_stunet_with_attention` | Factory function — recommended entry point |
 
-Run `python network/UNET_ST.py` to execute built-in architecture tests.
-
 ---
 
-## Findings
+## Proposed ST-UNet3+ Modules: 'network/STUnet3Plus.py'
 
-The `findings/` directory contains earlier experiments, ablations, and alternative architectures explored during development:
-
-- `findings/experiments/` — training and testing scripts for other model variants
-- `findings/networks/` — alternative architectures (DeepLab, ResUNet, CBAM, SwinUNet, MobileNetV2)
-- `findings/dataloaders/` — dataloaders for MSRA, VID, VOC datasets
-- `findings/results/` — evaluation results and visualizations across model variants
-- `findings/environment/` — conda environment specification
-- `findings/third_party/` — `pyLucid` (LucidDream data augmentation tool)
-
----
+| Class / Function | Description |
+|---|---|
+| `DoubleConv` | Standard `Conv-BN-ReLU x2` block |
+| `Down` | `MaxPool + DoubleConv` downsampling |
+| `Up` | `Upsample + Concat + DoubleConv` upsampling |
+| `SimpleContextAdd` | Attention module fusing temporal + spatial features |
+| `ST-UNet3+ Encoder` | 4-stage UNet encoder (64→128→256→512→512) |
+| `ST-UNet3+ Decoder` | 4-stage decoder with `SimpleContextAdd` at stages 1-3 |
+| `ST-UNet3+` | Full proposed spatiotemporal model |
+| `create_unet3plus` | Factory function — recommended entry point |
 
 ## Citation
 
-If you use this code, please cite the relevant work. The temporal prediction branch is based on a video frame prediction network trained adversarially with an Inception-v3 discriminator. The spatial branch follows the standard UNet architecture.
+D. Bezborodov. Temporal feature fusion for wildfire segmentation in uav video. pages 1–5, 2025.
+A. Shamsoshoara, F. Afghah, A. Razi, L. Zheng, P. Z. Ful´e, and E. Blasch. Aerial imagery pile burn detection using deep learning: the flame dataset. Computer Networks, page 108001, 2021.
+K. Xu, L. Wen, G. Li, L. Bo, and Q. Huang. Spatiotemporal cnn for video object segmentation. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pages 1379–1388, 2019. doi: 10.1109/CVPR.2019.00147.
