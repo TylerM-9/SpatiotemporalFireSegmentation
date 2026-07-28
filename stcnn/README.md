@@ -10,11 +10,7 @@ The key idea: a pretrained temporal branch processes previous frames to predict 
 
 <img width="424" height="831" alt="workflow_pipeline_newerer" src="https://github.com/user-attachments/assets/97032f84-8086-4f9e-b44b-1b9f6bc6a7ef" />
 
-```
-
-ST-UNET3+ ARCHITECTURE GOES HERE
-
-```
+<img width="1702" height="964" alt="STUnet3Plus drawio" src="https://github.com/user-attachments/assets/c8e7b8f3-802c-4b6a-a95e-f8113fd3668b" />
 
 The `SimpleContextAdd` attention module (in `network/UNET_ST.py`) integrates:
 1. Current decoder features
