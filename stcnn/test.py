@@ -4,6 +4,7 @@ Adjusted to match the training script and network architecture dynamically
 """
 
 import argparse
+from cv2 import threshold
 import numpy as np
 import os
 from mypath import Path
@@ -211,9 +212,13 @@ def main(args):
                     gt_sample = gt_sample / 255.0
 
                 preds_binary = (seg_pred > threshold).astype(np.float32)
-                targets_binary = gt_sample.astype(np.float32)
+                targets_binary = (gt_sample > 0.5).astype(np.float32)
 
-                # Calculate intersection and union for this image
+                # Squeeze to remove any singleton dimensions
+                preds_binary = np.squeeze(preds_binary)    
+                targets_binary = np.squeeze(targets_binary)
+
+                # Calculate intersection and union for global IoU
                 intersection = (preds_binary * targets_binary).sum()
                 union = preds_binary.sum() + targets_binary.sum() - intersection
                 
