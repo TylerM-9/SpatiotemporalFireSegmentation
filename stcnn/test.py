@@ -114,9 +114,9 @@ def main(args):
 
     # Dynamically generate the model name to match how it was saved in train.py
     if model_choice == "stunet3plus":
-        model_name = f'STUNET3PLUS_DAVIS_{dataset_type.upper()}{num_frame}'
+        model_name = f'{args.job_id}_STUNET3PLUS_DAVIS_{dataset_type.upper()}{num_frame}'
     else:
-        model_name = f'STUNET_UNET_DAVIS_{dataset_type.upper()}{num_frame}'
+        model_name = f'{args.job_id}_STUNET_UNET_DAVIS_{dataset_type.upper()}{num_frame}'
 
     save_dir = Path.save_root_dir()
     save_model_dir = os.path.join(save_dir, model_name)
@@ -573,6 +573,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--frame_nums", type=int, default=4,
                         help="Number of input frames (temporal branch)")
+
+    parser.add_argument("--job_id", type=str, default="0",
+                        help="job id of SLURM job")
 
     args = parser.parse_args()
     main(args)
