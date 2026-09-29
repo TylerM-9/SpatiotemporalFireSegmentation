@@ -249,7 +249,7 @@ def main(args):
                 # Save example images
                 if ii % save_interval == 0 and ii < num_examples_to_save * save_interval:
                     save_example_image(frames, gt_sample, seg_pred, ii, current_iou,
-                                       current_dice, current_precision, current_recall,
+                                       current_dice, current_precision, current_recall, current_bf_score,
                                        examples_dir, threshold)
 
                 # Progress update
@@ -469,7 +469,7 @@ def BF_Score(y_true, y_pred, threshold=0.5, tolerance =2):
 
 
 
-def save_example_image(input_img, gt_sample, seg_pred, index, iou, dice, precision, recall, save_dir, threshold):
+def save_example_image(input_img, gt_sample, seg_pred, index, iou, dice, precision, recall, bf_score, save_dir, threshold):
     """Save a visualization comparing input image, ground truth, and prediction."""
     if torch.is_tensor(input_img):
         input_numpy = input_img.cpu().numpy()
@@ -504,7 +504,7 @@ def save_example_image(input_img, gt_sample, seg_pred, index, iou, dice, precisi
 
     axes[2].imshow(input_frame)
     axes[2].imshow(pred_display, alpha=0.5, cmap='jet')
-    axes[2].set_title(f'Prediction\nIoU: {iou:.4f} | Dice: {1 - dice:.4f}\nP: {precision:.4f} | R: {recall:.4f}',
+    axes[2].set_title(f'Prediction\nIoU: {iou:.4f} | Dice: {1 - dice:.4f}\nP: {precision:.4f} | R: {recall:.4f} | BF-score: {bf_score:.4f}',
                       fontsize=11, fontweight='bold')
     axes[2].axis('off')
 
