@@ -118,9 +118,9 @@ def main(args):
     model = args.model  # 'stunet' or 'stunet3plus'
 
     if (model == "stunet"):
-        modelName = f'STUNET_UNET_DAVIS_{dataset_type.upper()}{num_frame}'
+        modelName = f'STUNET_PATH'
     else:
-        modelName = f'STUNET3PLUS_DAVIS_{dataset_type.upper()}{num_frame}'
+        modelName = f'STUNET3PLUS_PATH'
 
     save_dir = args.output_dir
     os.makedirs(save_dir, exist_ok=True)
@@ -143,7 +143,7 @@ def main(args):
     # Discriminator (for temporal NetG supervision)
     netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
     initialize_netD(netD, os.path.join(
-        '/home/q96d866/Data/',
+        '/home/c43n256/Data',
         'NetD_epoch-99.pth'))
 
     # Temporal prediction branch (pretrained)
@@ -153,7 +153,7 @@ def main(args):
     print("Loading weights from pretrained NetG")
     pretrained_netG_dict = torch.load(
         os.path.join(
-            '/home/q96d866/Data/',
+            '/home/c43n256/Data',
             'NetG_epoch-99.pth'),
         map_location=device
     )
@@ -204,9 +204,9 @@ def main(args):
     elif resume_epoch > 0:
         # Try to load from standard resume path
         if model == "stunet":
-            resume_path = os.path.join("/home/q96d866/STCNN/output/STUNET_UNET_DAVIS4/STUNET_UNET_DAVIS4-199.pth")
+            resume_path = os.path.join(resume_epoch + "/STUNET_RUNS/STUNET-199.pth")
         else: 
-            resume_path = os.path.join("/home/q96d866/STCNN/output/STUNET3PLUS_DAVIS4/STUNET3PLUS_DAVIS4-199.pth")
+            resume_path = os.path.join(resume_epoch + "/STUNET3PLUS_RUNS/STUNET3PLUS-199.pth")
 
         if os.path.exists(resume_path):
             print(f"Resuming from: {resume_path}")

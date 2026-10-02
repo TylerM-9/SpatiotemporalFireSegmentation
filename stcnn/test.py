@@ -114,11 +114,11 @@ def main(args):
 
     # Dynamically generate the model name to match how it was saved in train.py
     if model_choice == "stunet3plus":
-        model_name = f'{args.job_id}_STUNET3PLUS_DAVIS_{dataset_type.upper()}{num_frame}'
+        model_name = f'Testing_Output_STUNET3PLUS'
     else:
-        model_name = f'{args.job_id}_STUNET_UNET_DAVIS_{dataset_type.upper()}{num_frame}'
+        model_name = f'Testing_Output_STUNET'
 
-    save_dir = Path.save_root_dir()
+    save_dir = args.output_dir
     save_model_dir = os.path.join(save_dir, model_name)
     os.makedirs(save_model_dir, exist_ok=True)
 
@@ -217,6 +217,14 @@ def main(args):
                 # Squeeze to remove any singleton dimensions
                 preds_binary = np.squeeze(preds_binary)    
                 targets_binary = np.squeeze(targets_binary)
+
+                #Testing for Bug
+                if ii < 5:
+                    print(f"preds_binary shape: {preds_binary.shape}, targets_binary shape: {targets_binary.shape}")
+                    print(f"  intersection: {intersection}, union: {union}")  # move below the calc, or print after
+
+                assert preds_binary.shape == targets_binary.shape, \
+                f"Shape mismatch! preds: {preds_binary.shape}, targets: {targets_binary.shape}"
 
                 # Calculate intersection and union for global IoU
                 intersection = (preds_binary * targets_binary).sum()
@@ -574,8 +582,8 @@ if __name__ == "__main__":
     parser.add_argument("--frame_nums", type=int, default=4,
                         help="Number of input frames (temporal branch)")
 
-    parser.add_argument("--job_id", type=str, default="0",
-                        help="job id of SLURM job")
+    parser.add_argument("--output_dir", type=str, default="/home/group/farazdadgostari/Testing/runs",
+                        help="output directory")
 
     args = parser.parse_args()
     main(args)
