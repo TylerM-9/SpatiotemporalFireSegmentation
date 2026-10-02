@@ -218,6 +218,10 @@ def main(args):
                 preds_binary = np.squeeze(preds_binary)    
                 targets_binary = np.squeeze(targets_binary)
 
+                # Calculate intersection and union for global IoU
+                intersection = (preds_binary * targets_binary).sum()
+                union = preds_binary.sum() + targets_binary.sum() - intersection
+
                 #Testing for Bug
                 if ii < 5:
                     print(f"preds_binary shape: {preds_binary.shape}, targets_binary shape: {targets_binary.shape}")
@@ -225,10 +229,6 @@ def main(args):
 
                 assert preds_binary.shape == targets_binary.shape, \
                 f"Shape mismatch! preds: {preds_binary.shape}, targets: {targets_binary.shape}"
-
-                # Calculate intersection and union for global IoU
-                intersection = (preds_binary * targets_binary).sum()
-                union = preds_binary.sum() + targets_binary.sum() - intersection
                 
                 # Accumulate for the global metric
                 total_global_intersection += intersection
