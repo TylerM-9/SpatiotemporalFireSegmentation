@@ -221,14 +221,6 @@ def main(args):
                 # Calculate intersection and union for global IoU
                 intersection = (preds_binary * targets_binary).sum()
                 union = preds_binary.sum() + targets_binary.sum() - intersection
-
-                #Testing for Bug
-                if ii < 5:
-                    print(f"preds_binary shape: {preds_binary.shape}, targets_binary shape: {targets_binary.shape}")
-                    print(f"  intersection: {intersection}, union: {union}")  # move below the calc, or print after
-
-                assert preds_binary.shape == targets_binary.shape, \
-                f"Shape mismatch! preds: {preds_binary.shape}, targets: {targets_binary.shape}"
                 
                 # Accumulate for the global metric
                 total_global_intersection += intersection
