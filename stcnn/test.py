@@ -434,7 +434,7 @@ def get_boundary(mask_bin):
 
     return np.argwhere(boundary)
 
-def BF_Score(y_true, y_pred, threshold=0.5, tolerance =2):
+def BF_Score(y_true, y_pred, threshold, tolerance =1):
     """
     Calculate Boundary F Score (BF Score), measures sharpness of predicted boundaries
     """
