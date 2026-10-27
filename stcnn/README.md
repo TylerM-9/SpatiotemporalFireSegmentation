@@ -8,9 +8,9 @@ The key idea: a pretrained temporal branch processes previous frames to predict 
 
 ## Architecture Overview
 
-![](../docs/Architecture_Overview.png)
+![Architecture Overview](../docs/Architecture_Overview.png#gh-light-mode-only)
 
-![](../docs/Spatial_Branch_Diagram.png)
+![Spatial Branch Diagram](../docs/Spatial_Branch_Diagram.png#gh-light-mode-only)
 
 The `SimpleContextAdd` attention module (in `network/UNET_ST.py`) integrates:
 1. Current decoder features
