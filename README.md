@@ -1,4 +1,4 @@
-# STCNN-FIRE
+# Spatiotemporal Fire Segmentation
 
 Dual-Branch Spatiotemporal Convolutional Neural Network - ST-UNet3+
 
