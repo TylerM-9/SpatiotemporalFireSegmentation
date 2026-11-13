@@ -134,6 +134,7 @@ def main(args):
     print(f"  Frames: {num_frame}")
     print(f"  Epochs: {nEpochs}")
     print(f"  Batch size: {batch_size}")
+    print(f"  Shuffle split: {args.shuffle_split}")
     print(f"  Resume from epoch: {resume_epoch}")
     print(f"{'=' * 60}\n")
 
@@ -299,7 +300,8 @@ def main(args):
             inputRes=(256, 256),
             transform=composed_transforms,
             mode="train",
-            num_frame=num_frame
+            num_frame=num_frame,
+            shuffle_arg=args.shuffle_split
         )
         trainloader = DataLoader(db_train, batch_size=batch_size, shuffle=True, num_workers=4)
 
@@ -307,7 +309,8 @@ def main(args):
         test_set = db.FIREDatasetRandom(
             inputRes=(256, 256),
             mode="test",
-            num_frame=num_frame
+            num_frame=num_frame,
+            shuffle=args.shuffle_split
         )
         test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
     else:
@@ -655,6 +658,10 @@ if __name__ == "__main__":
     
     parser.add_argument("--batch", type=int, default=6,
                         help="Batch size for training")
+
+    parser.add_argument("--shuffle_split", action="store_true",
+                        help="Randomly assign windows to train/test "
+                            "Default: sequential split.")
 
     args = parser.parse_args()
     main(args)

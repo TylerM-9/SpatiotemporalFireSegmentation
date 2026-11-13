@@ -518,13 +518,15 @@ class FIREDatasetRandom(Dataset):
                  mode="train",  # "train" or "test"
                  num_frame=4,
                  test_size=0.2,  # Fraction of data to use for testing
-                 random_state=42):  # For reproducible splits
+                 random_state=42, # For reproducible splits
+                 shuffle_arg=False):  # Whether to shuffle the windows in the DataLoader
 
         self.transform = transform
         self.inputRes = inputRes
         self.toTensor = tr.ToTensor()
         self.num_frame = num_frame
         self.mode = mode
+        self.shuffle = shuffle_arg
 
         image_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif'}
 
@@ -582,7 +584,7 @@ class FIREDatasetRandom(Dataset):
             valid_indices,
             test_size=test_size,
             random_state=random_state,
-            shuffle=True
+            shuffle=self.shuffle
         )
 
         # Select the appropriate indices based on mode

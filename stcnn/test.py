@@ -144,7 +144,8 @@ def main(args):
             test_set = db.FIREDatasetRandom(
                 inputRes=(256, 256),
                 mode="test",
-                num_frame=num_frame
+                num_frame=num_frame,
+                shuffle_arg=args.shuffle_split
             )
         else:
             print("Testing is currently only configured for the FIRE dataset. Exiting.")
@@ -576,6 +577,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--output_dir", type=str, default="/home/group/farazdadgostari/Testing/runs",
                         help="output directory")
+
+    parser.add_argument("--shuffle_split", action="store_true",
+                        help="Randomly assign windows to train/test "
+                            "Default: sequential split.")
 
     args = parser.parse_args()
     main(args)
