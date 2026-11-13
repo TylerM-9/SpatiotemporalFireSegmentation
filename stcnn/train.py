@@ -142,9 +142,7 @@ def main(args):
     # ------------------------------
     # Discriminator (for temporal NetG supervision)
     netD = Inception3(num_classes=1, aux_logits=False, transform_input=True)
-    initialize_netD(netD, os.path.join(
-        '/home/c43n256/Data',
-        'NetD_epoch-99.pth'))
+    initialize_netD(netD, Path.pretrained_netD_dict())
 
     # Temporal prediction branch (pretrained)
     pred_enc = FramePredEncoder(frame_nums=num_frame)
@@ -152,9 +150,7 @@ def main(args):
 
     print("Loading weights from pretrained NetG")
     pretrained_netG_dict = torch.load(
-        os.path.join(
-            '/home/c43n256/Data',
-            'NetG_epoch-99.pth'),
+        Path.pretrained_netG_dict(),
         map_location=device
     )
 
@@ -290,7 +286,7 @@ def main(args):
         print("Loading DAVIS dataset for pretraining...")
         db_train = davis.DAVISDataset(
             inputRes=(256, 256),
-            samples_list_file=os.path.join('/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/data/DAVIS16_samples_list.txt'),
+            samples_list_file=os.path.join(Path.DAVIS16_samples_list()),
             transform=composed_transforms,
             num_frame=num_frame
         )
@@ -645,7 +641,7 @@ if __name__ == "__main__":
     parser.add_argument("--pretrained_seg", type=str, default=None,
                         help="Path to pretrained segmentation checkpoint")
 
-    parser.add_argument("--output_dir", type=str, default = "/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/output",
+    parser.add_argument("--output_dir", type=str, default = Path.default_output(),
                         help="Directory to save models and logs")
     
     parser.add_argument("--seed", type=int, default=42,

@@ -10,6 +10,7 @@ import random
 import imageio
 import cv2
 import skimage.morphology as sm
+from mypath import Path
 from PIL import Image
 from torch.utils.data import Dataset
 from dataloaders import custom_transforms as tr
@@ -17,8 +18,8 @@ from dataloaders import custom_transforms as tr
 class FIREDatasetGeneral(Dataset):
 	def __init__(self,
 				inputRes=None,
-				image_path="/home/c43n256/Data/archive-2/Image/Merged",
-				mask_path="/home/c43n256/Data/archive-2/Mask/Fire",
+				image_path=Path.archive2_image_path(),
+				mask_path=Path.archive2_mask_path(),
 				transform=None,
 				num_frame=4):
 		self.transform = transform
@@ -116,7 +117,7 @@ class FIREDatasetGeneral(Dataset):
 
 class FIREDatasetSingle(Dataset):
 	def __init__(self, inputRes=None,
-			  	 samples_path="/home/c43n256/Data/Mask_Data",
+			  	 samples_path=Path.flame_mask_samples_path(),
 				 transform=None,
 				 mode="train"):
 		self.transform = transform
@@ -216,7 +217,7 @@ from dataloaders import custom_transforms as tr  # assumes dict-aware ToTensor i
 
 class FIREDataset(Dataset):
     def __init__(self, inputRes=None,
-                 samples_path="/home/c43n256/Data/Mask_Data",
+                 samples_path=Path.flame_mask_samples_path(),
                  transform=None,
                  mode="test",
                  num_frame=4):
@@ -364,7 +365,7 @@ from sklearn.model_selection import train_test_split
 class FIREDatasetSegmentation(Dataset):
     def __init__(self,
                  inputRes=None,
-                 samples_path="/home/c43n256/Data/Mask_Data",
+                 samples_path=Path.flame_mask_samples_path(),
                  joint_transform=None,
                  transform=None,
                  target_transform=None,
@@ -512,7 +513,7 @@ from sklearn.model_selection import train_test_split
 
 class FIREDatasetRandom(Dataset):
     def __init__(self, inputRes=None,
-                 samples_path="/home/c43n256/Data/Mask_Data",
+                 samples_path=Path.flame_mask_samples_path(),
                  transform=None,
                  mode="train",  # "train" or "test"
                  num_frame=4,
