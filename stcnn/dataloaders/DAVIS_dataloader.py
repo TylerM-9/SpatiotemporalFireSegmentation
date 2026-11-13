@@ -12,6 +12,7 @@ import cv2
 import skimage.morphology as sm
 from torch.utils.data import Dataset
 from dataloaders import custom_transforms as tr
+from mypath import Path
 
 
 class cusToTensor(object):
@@ -54,7 +55,7 @@ class DAVISDataset(Dataset):
 	"""DAVIS 2016 dataset constructed using the PyTorch built-in functionalities"""
 
 	def __init__(self, inputRes=None,
-				 samples_list_file='/home/c43n256/REU2026/SpatiotemporalFireSegmentation/stcnn/data/DAVIS16_samples_list.txt',
+				 samples_list_file=Path.davis_samples_list(),
 				 transform=None,
 				 num_frame=4):
 
@@ -131,7 +132,7 @@ class DAVISDataset(Dataset):
 class DAVIS_First_Frame_Dataset(Dataset):
 	def __init__(self, train=True,
 				 inputRes=None,
-				 db_root_dir='/home/c43n256/Dataset/DAVIS/',
+				 db_root_dir=Path.davis_db_root_dir(),
 				 transform=None,
 				 seq_name=None,
 				 frame_nums=4):
@@ -232,7 +233,7 @@ class DAVIS_First_Frame_Dataset(Dataset):
 class DAVIS_Online_Dataset(Dataset):
 	def __init__(self, train=True,
 				 inputRes=None,
-				 db_root_dir='/home/c43n256/Dataset/DAVIS/',
+				 db_root_dir=Path.davis_db_root_dir(),
 				 transform=None,
 				 seq_name=None,
 				 frame_nums=4):
