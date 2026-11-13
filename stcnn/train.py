@@ -250,7 +250,11 @@ def main(args):
     # ------------------------------
     lp_function = nn.MSELoss().to(device)
     criterion = nn.BCELoss().to(device)
-    seg_criterion = BCEDiceLoss(bce_weight=0.5, dice_weight=0.5)
+
+    if args.loss_function == "bce":
+        seg_criterion = nn.BCEWithLogitsLoss().to(device)
+    else:
+        seg_criterion = BCEDiceLoss(bce_weight=0.5, dice_weight=0.5)
 
     # ------------------------------
     # Optimizers
@@ -662,6 +666,9 @@ if __name__ == "__main__":
     parser.add_argument("--shuffle_split", action="store_true",
                         help="Randomly assign windows to train/test "
                             "Default: sequential split.")
+
+    parser.add_argument("--loss_function", type=str, default="bce", choices=["bce", "hybrid"],
+                        help="Loss function to use for training (default: 'bce')")
 
     args = parser.parse_args()
     main(args)
