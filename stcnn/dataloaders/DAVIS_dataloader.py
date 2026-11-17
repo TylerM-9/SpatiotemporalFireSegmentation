@@ -55,7 +55,7 @@ class DAVISDataset(Dataset):
 	"""DAVIS 2016 dataset constructed using the PyTorch built-in functionalities"""
 
 	def __init__(self, inputRes=None,
-				 samples_list_file=Path.davis_samples_list(),
+				 samples_list_file=Path.DAVIS16_samples_list(),
 				 transform=None,
 				 num_frame=4):
 
