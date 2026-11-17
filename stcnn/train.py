@@ -314,7 +314,7 @@ def main(args):
             inputRes=(256, 256),
             mode="test",
             num_frame=num_frame,
-            shuffle=args.shuffle_split
+            shuffle_arg=args.shuffle_split
         )
         test_loader = DataLoader(test_set, batch_size=1, num_workers=4, shuffle=True)
     else:
